@@ -18,3 +18,15 @@ source .venv/Scripts/activate
 ```bash
 source .venv/bin/activate
 ```
+
+## Requirements.txt 관리
+
+### 현재 라이브러리를 requirements.txt에 기록하기
+```bash
+pip freeze > requirements.txt
+```
+
+### requirements.txt로 라이브러리 업데이트하기
+```bash
+pip install -r requirements.txt --upgrade
+```
