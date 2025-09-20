@@ -27,6 +27,7 @@
 프로젝트 관련 상세 문서들은 `Docs/` 폴더에서 확인할 수 있습니다:
 
 - [`gazehome_architecture.md`](Docs/gazehome_architecture.md) - GazeHome AI 서버 아키텍처 및 구조 문서
+- [`agent_architecture.md`](Docs/agent_architecture.md) - GazeHome AI 에이전트 시스템 아키텍처 문서
 - [`git_convention.md`](Docs/git_convention.md) - Git 커밋 컨벤션 가이드
 - [`venv_and_requirements_guide.md`](Docs/venv_and_requirements_guide.md) - 가상환경 및 의존성 관리 가이드
 
