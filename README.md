@@ -45,6 +45,7 @@ GazeHome AI 서버는 다음과 같은 흐름으로 작동합니다:
 - [`api_documentation.md`](Docs/api_documentation.md) - API 엔드포인트 문서 및 테스트 가이드
 - [`gazehome_architecture.md`](Docs/gazehome_architecture.md) - GazeHome AI 서버 아키텍처 및 구조 문서
 - [`agent_architecture.md`](Docs/agent_architecture.md) - GazeHome AI 에이전트 시스템 아키텍처 문서
+- [`weather_mcp_guide.md`](Docs/weather_mcp_guide.md) - Weather MCP 구현 및 사용 가이드
 - [`git_convention.md`](Docs/git_convention.md) - Git 커밋 컨벤션 가이드
 - [`venv_and_requirements_guide.md`](Docs/venv_and_requirements_guide.md) - 가상환경 및 의존성 관리 가이드
 
@@ -100,11 +101,25 @@ curl http://localhost:8000/api/gaze/status
 - ReDoc: http://localhost:8000/redoc
 
 ### 6. 테스트 실행
+
+#### 🧪 전체 시스템 테스트 (권장)
+```bash
+# MCP + LLM + 추천 시스템 통합 테스트
+PYTHONPATH=. python examples/test_full_system.py
+```
+
+#### 🌤️ 날씨 MCP 테스트
+```bash
+# Weather MCP Server 및 Client 테스트
+PYTHONPATH=. python examples/test_weather_mcp.py
+```
+
+#### 🏠 기기 클릭 API 테스트
 ```bash
 # Python 테스트 스크립트
-python examples/test_device_click.py
+PYTHONPATH=. python examples/test_device_click.py
 
-# 또는 curl 명령어로 직접 테스트
+# 또는 curl 명령어로 직접 테스트 (서버 실행 후)
 curl -X POST http://localhost:8000/api/gaze/click \
   -H "Content-Type: application/json" \
   -d '{

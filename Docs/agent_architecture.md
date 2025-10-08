@@ -2,11 +2,40 @@
 
 ## 개요
 
-GazeHome의 AI 에이전트 시스템은 사용자의 시선 추적 데이터와 외부 환경 정보를 종합적으로 분석하여 지능적인 스마트 홈 제어를 제공하는 3단계 에이전트 구조로 설계되었습니다.
+GazeHome의 AI 에이전트 시스템은 사용자의 시선 추적 데이터와 외부 환경 정보를 종합적으로 분석하여 지능적인 스마트 홈 제어를 제공하는 시스템입니다.
+
+> 🎯 **현재 상태 (MVP)**: **Single Agent 아키텍처**  
+> 현재는 `LLMService`가 **하나의 통합 Agent**로 작동하며, 의도 추론, 상황 분석, 추천 생성을 모두 처리합니다.  
+> 이는 빠른 응답 속도와 단순한 구조를 위한 MVP 전략입니다.
+
+> 🔮 **미래 확장**: **Multi-Agent 아키텍처**  
+> 필요에 따라 3단계 에이전트 구조(Intent Recognition → Context Analysis → Recommendation)로 확장 가능하도록 설계되었습니다.
+
+> ⚠️ **2025-10-08 업데이트**: 시스템이 클릭 기반으로 전환되면서 **Agent 1의 역할이 크게 축소**되었습니다.  
+> 하드웨어에서 이미 클릭된 기기 정보를 제공하므로, "어떤 기기를 제어하려는지" 파악하는 기능은 더 이상 필요하지 않습니다.
 
 ## 시스템 아키텍처
 
-### 전체 구조도
+### 현재 구조도 (Single Agent - MVP)
+
+```
+하드웨어 (클릭 이벤트)
+    ↓ HTTP POST /api/gaze/click
+FastAPI Server
+    ↓
+LLMService (Single Agent)
+├── Perception: 기기 정보, 시간, 컨텍스트 수집
+├── MCP Integration: 날씨 API 등 외부 정보
+├── Reasoning: Gemini LLM 기반 통합 추론
+│   ├── 의도 파악 (Intent Recognition)
+│   ├── 상황 분석 (Context Analysis)
+│   └── 추천 생성 (Recommendation)
+└── Action: 최적 명령어 및 파라미터 결정
+    ↓
+추천 결과 반환 (JSON)
+```
+
+### 미래 확장 구조도 (Multi-Agent System)
 
 ```
 UI Layer (React/Vue)
@@ -25,29 +54,80 @@ Learning & Adaptation System
 
 ## 에이전트별 역할 및 기능
 
-### Agent 1: 의도 파악 에이전트 (Intent Recognition Agent)
+### 현재: Single Agent (LLMService)
 
-**목표**: 사용자 시선 데이터와 행동 패턴을 분석하여 명시적/묵시적 의도를 파악
+> 🎯 **현재 구현**: `app/services/llm_service.py`의 `LLMService` 클래스가 **하나의 통합 Agent**로 작동합니다.
 
-**주요 기능**:
-- 시선-의도 매핑: 특정 기기에 대한 응시가 일정 시간 이상 지속될 경우 제어 의도로 간주
-- 컨텍스트 기반 의도 강화: 과거 사용 기록을 바탕으로 시선 의도에 대한 확신도 향상
-- 시간대별 패턴 분석: 사용자의 생활 패턴을 학습하여 의도 추론 정확도 개선
+**Agent의 구성 요소**:
+```python
+class LLMService:  # Single Agent
+    
+    # 1. Perception (환경 인식)
+    async def generate_device_recommendation(device_info, context):
+        - 클릭된 기기 정보 수신
+        - 현재 시간 및 컨텍스트 파악
+        - MCP를 통한 날씨 정보 조회
+    
+    # 2. Reasoning (추론)
+        - Gemini LLM 기반 통합 추론
+        - 의도 파악 + 상황 분석 + 추천 생성
+    
+    # 3. Action (행동 결정)
+        - 최적 명령어 결정
+        - 파라미터 설정
+        - 사용자 안내 메시지 생성
+```
 
-**입력 데이터**:
-- `gaze_data`: 시선이 머문 기기 ID, 응시 시간, 시선 이동 경로
-- `user_interaction_history`: 과거 UI 조작 기록, 특정 기기 사용 패턴
-- `time_context`: 현재 시각, 요일, 계절 정보
+**장점**:
+- ✅ 빠른 응답 속도 (단일 LLM 호출)
+- ✅ 간단한 구조 (에이전트 간 조율 불필요)
+- ✅ 유지보수 용이
+- ✅ MVP에 적합
 
-**출력 데이터**:
-- `potential_intent`: 'control_light', 'adjust_ac_temp' 등
-- `target_device_id`: 'light_01', 'ac_01'
-- `current_gaze_focus`: 현재 시선이 머물고 있는 기기 ID
-- `confidence`: 의도 파악 확신도 (0.0-1.0)
+**한계**:
+- ⚠️ 복잡한 다단계 추론 제한
+- ⚠️ 전문화된 처리 어려움
+- ⚠️ 병렬 처리 불가
 
-**UI 연동**:
-- 메인 제어 페이지에서 사용자가 특정 스마트 기기에 시선을 오래 머무를 때 해당 기기에 대한 제어 의도를 추론
-- 시선이 머무는 기기를 실시간으로 강조 표시
+---
+
+### 미래: Multi-Agent System
+
+### Agent 1: 의도 파악 에이전트 (Intent Recognition Agent) ~~[현재는 통합됨]~~
+
+> 🔄 **현재 상태**: 클릭 기반 시스템으로 전환되면서 이 에이전트의 주요 기능이 **LLMService로 통합**되었습니다.
+
+**기존 목표** ~~(더 이상 필요 없음)~~: 
+- ~~사용자 시선 데이터와 행동 패턴을 분석하여 명시적/묵시적 의도를 파악~~
+- ~~시선-의도 매핑: 특정 기기에 대한 응시가 일정 시간 이상 지속될 경우 제어 의도로 간주~~
+
+**변경 이유**:
+- **이전**: x,y 좌표 → Agent 1이 "어떤 기기를 보는지" 판단 필요
+- **현재**: 하드웨어가 이미 "어떤 기기를 클릭했는지" 전송 → **판단 불필요**
+- **의도 추론**: 이제 `LLMService.generate_device_recommendation()`에서 처리
+
+**현재 통합된 기능** (`app/services/llm_service.py`):
+```python
+async def generate_device_recommendation(device_info, context):
+    """
+    - 클릭된 기기 정보 직접 수신
+    - 기기 상태, 시간대, 사용자 컨텍스트 분석
+    - 의도 추론 + 추천 생성을 한 번에 처리
+    """
+```
+
+**입력 데이터** (현재):
+- ✅ `clicked_device`: 하드웨어가 제공한 클릭된 기기 정보
+- ✅ `current_state`: 기기의 현재 상태 (켜짐/꺼짐 등)
+- ✅ `time_context`: 시간대 정보
+
+**출력 데이터** (현재):
+- ✅ `intent`: 추론된 사용자 의도
+- ✅ `confidence`: 신뢰도
+- ✅ `prompt_text`: 사용자에게 보여줄 추천 메시지
+- ✅ `action`: 실행할 명령어
+
+> 💡 **결론**: Agent 1의 역할은 더 이상 독립적으로 필요하지 않으며, LLM 서비스에 통합되었습니다.
 
 ### Agent 2: 상황 분석 에이전트 (Contextual Analysis Agent)
 
