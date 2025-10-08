@@ -1,2 +1,19 @@
-.venv
+# Python
+__pycache__/
+
+# Virtual Environment
+.venv/
+
+# OS
+## macos
+.DS_Store
+## windows
+Thumbs.db
+
+# Logs
+*.log
+
+# Database
+*.db
+
 .env

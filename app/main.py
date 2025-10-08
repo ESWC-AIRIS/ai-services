@@ -14,6 +14,7 @@ import pytz
 from app.core.config import settings
 from app.core.database import connect_to_mongo, close_mongo_connection
 from app.api.router import api_router
+from app.services.mongodb_service import mongodb_service
 
 
 # 한국 시간대 설정
@@ -35,6 +36,10 @@ async def lifespan(app: FastAPI):
     logger.info("GazeHome AI Services 시작 중...")
     await connect_to_mongo()
     logger.info("MongoDB 연결 완료")
+    
+    # MongoDB 인덱스 생성
+    await mongodb_service.create_indexes()
+    logger.info("MongoDB 인덱스 생성 완료")
     
     yield
     

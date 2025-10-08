@@ -23,8 +23,8 @@ langchain-community==0.0.10
 chromadb==0.4.18
 
 # 로깅 및 모니터링
-langsmith==0.0.69
-langfuse==2.0.0
+langsmith>=0.0.77
+langfuse==2.60.10
 
 # 외부 API
 httpx==0.25.2
