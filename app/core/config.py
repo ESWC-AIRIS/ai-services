@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     
     # Gemini API 설정
     GEMINI_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-1.5-pro"
+    GEMINI_MODEL: str = "gemini-2.0-flash"  # 기본 모델로 변경
     
     # Vector DB 설정 (ChromaDB)
     VECTOR_DB_PATH: str = "./data/vector_db"

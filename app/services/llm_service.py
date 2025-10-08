@@ -8,6 +8,7 @@ from typing import Dict, Any, List, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage, SystemMessage
 from app.core.config import settings
+from app.mcp import mcp_client
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,8 @@ class LLMService:
             model=settings.GEMINI_MODEL,
             google_api_key=settings.GEMINI_API_KEY,
             temperature=0.7,
-            max_output_tokens=2048
+            max_output_tokens=2048,
+            convert_system_message_to_human=True  # 시스템 메시지 변환
         )
         logger.info(f"LLM 서비스 초기화 완료: {settings.GEMINI_MODEL}")
         logger.info(f"Gemini API 키 설정됨: {bool(settings.GEMINI_API_KEY)}")
@@ -171,6 +173,7 @@ class LLMService:
     ) -> Dict[str, Any]:
         """
         클릭된 IoT 기기에 대한 심층적 의도 추론 및 최적의 명령어 추천
+        MCP를 통해 날씨 정보를 활용하여 더 정확한 추천을 제공합니다.
         
         Args:
             device_info: 클릭된 기기 정보 (device_id, device_type, current_state 등)
@@ -180,6 +183,10 @@ class LLMService:
             추천 정보 (prompt_text, action, reasoning)
         """
         try:
+            # MCP를 통해 날씨 정보 조회
+            weather_info = await mcp_client.get_weather()
+            weather_summary = await mcp_client.get_weather_summary()
+            
             system_prompt = """
             당신은 GazeHome의 AI 추천 에이전트입니다.
             사용자가 시선으로 IoT 기기를 클릭했을 때, 그 의도를 심층적으로 분석하고 
@@ -191,6 +198,7 @@ class LLMService:
             3. 기기 타입별 일반적인 사용 패턴
             4. 기기의 기능(capabilities)
             5. 사용자 편의성
+            6. 현재 날씨 및 환경 조건 (온도, 습도, 날씨 상태)
             
             응답은 반드시 다음 JSON 형식으로 작성해주세요:
             {
@@ -202,7 +210,7 @@ class LLMService:
                     "command": "실행할 명령어",
                     "parameters": {추가 파라미터}
                 },
-                "reasoning": "이렇게 추천한 이유"
+                "reasoning": "이렇게 추천한 이유 (날씨 정보 포함)"
             }
             """
             
@@ -231,10 +239,15 @@ class LLMService:
             - 시간대: {time_info['time_period']}
             - 요일: {time_info['weekday']}
             
+            ## 날씨 정보 (MCP를 통해 조회)
+            - 날씨 요약: {weather_summary}
+            - 상세 정보: {weather_info}
+            
             ## 추가 컨텍스트
             {context}
             
             위 정보를 바탕으로 사용자의 의도를 추론하고 최적의 명령어를 추천해주세요.
+            날씨 정보를 고려하여 더 정확한 추천을 해주세요.
             """
             
             messages = [
@@ -261,7 +274,7 @@ class LLMService:
             
             try:
                 result = json.loads(content)
-                logger.info(f"기기 추천 생성 완료: {device_info.get('device_id')}")
+                logger.info(f"기기 추천 생성 완료 (날씨 정보 포함): {device_info.get('device_id')}")
                 return result
             except json.JSONDecodeError:
                 # JSON 파싱 실패 시 기본 구조 반환
@@ -275,7 +288,7 @@ class LLMService:
                         "command": "toggle",
                         "parameters": {}
                     },
-                    "reasoning": response.content
+                    "reasoning": f"{response.content} (날씨: {weather_summary})"
                 }
                 return result
             
