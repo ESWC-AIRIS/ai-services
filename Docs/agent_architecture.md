@@ -14,10 +14,15 @@ GazeHome의 AI 에이전트 시스템은 사용자의 시선 추적 데이터와
 > ⚠️ **2025-10-08 업데이트**: 시스템이 클릭 기반으로 전환되면서 **Agent 1의 역할이 크게 축소**되었습니다.  
 > 하드웨어에서 이미 클릭된 기기 정보를 제공하므로, "어떤 기기를 제어하려는지" 파악하는 기능은 더 이상 필요하지 않습니다.
 
+> 🚀 **2025-10-14 업데이트**: **능동적 추천 시스템 추가 (Proactive Recommendation)**  
+> 기존의 **Pull 방식** (하드웨어 요청 → AI 응답)에서 **Push 방식** (AI가 적절한 타이밍에 추천 전송)으로 확장되었습니다.  
+> Phase 1에서는 **주기적 추천(Periodic Recommendation)**을 구현하여, 설정된 간격마다 사용자에게 능동적인 기기 제어 추천을 제공합니다.
+
 ## 시스템 아키텍처
 
-### 현재 구조도 (Single Agent - MVP)
+### 현재 구조도 (Hybrid: Pull + Push)
 
+#### 1️⃣ Pull 방식 (기존) - 반응적 추천 (Reactive)
 ```
 하드웨어 (클릭 이벤트)
     ↓ HTTP POST /api/gaze/click
@@ -33,6 +38,25 @@ LLMService (Single Agent)
 └── Action: 최적 명령어 및 파라미터 결정
     ↓
 추천 결과 반환 (JSON)
+```
+
+#### 2️⃣ Push 방식 (신규) - 능동적 추천 (Proactive)
+```
+APScheduler (주기적 실행, 기본 30분)
+    ↓
+ProactiveRecommendationService
+├── 컨텍스트 수집
+│   ├── 현재 시간 정보
+│   ├── MCP 날씨 정보
+│   └── 사용자 메모리 (Short/Long-term)
+├── 사용 가능한 기기 목록 조회
+└── LLMService를 통한 추천 생성
+    ↓
+HardwareClient
+    ↓ HTTP POST to Hardware
+하드웨어에 추천 전송
+    ↓
+사용자에게 추천 표시
 ```
 
 ### 미래 확장 구조도 (Multi-Agent System)
@@ -54,13 +78,17 @@ Learning & Adaptation System
 
 ## 에이전트별 역할 및 기능
 
-### 현재: Single Agent (LLMService)
+### 현재: Single Agent with Memory (LLMService)
 
-> 🎯 **현재 구현**: `app/services/llm_service.py`의 `LLMService` 클래스가 **하나의 통합 Agent**로 작동합니다.
+> 🎯 **현재 구현**: `app/services/llm_service.py`의 `LLMService` 클래스가 **Memory를 갖춘 완전한 Agent**로 작동합니다.
 
-**Agent의 구성 요소**:
+**완전한 Agent의 구성 요소**:
 ```python
-class LLMService:  # Single Agent
+class LLMService:  # Memory-enabled Single Agent
+    
+    def __init__(self, db_service=None):
+        self.llm = ChatGoogleGenerativeAI(...)
+        self.memory = get_memory_service(db_service)  # ✅ Memory 통합!
     
     # 1. Perception (환경 인식)
     async def generate_device_recommendation(device_info, context):
@@ -68,26 +96,56 @@ class LLMService:  # Single Agent
         - 현재 시간 및 컨텍스트 파악
         - MCP를 통한 날씨 정보 조회
     
-    # 2. Reasoning (추론)
+    # 2. Memory (기억)
+        - Short-term Memory: 세션 내 대화 히스토리 (최근 10개)
+        - Long-term Memory: 사용자 선호도 및 패턴 (MongoDB)
+        - 컨텍스트 요약 및 인사이트 생성
+    
+    # 3. Reasoning (추론)
         - Gemini LLM 기반 통합 추론
+        - Memory 정보를 활용한 개인화된 추천
         - 의도 파악 + 상황 분석 + 추천 생성
     
-    # 3. Action (행동 결정)
+    # 4. Action (행동 결정)
         - 최적 명령어 결정
         - 파라미터 설정
         - 사용자 안내 메시지 생성
+        - 상호작용 기록 (Memory 업데이트)
+    
+    # 5. Learning (학습)
+    async def update_feedback(user_id, session_id, interaction_id, accepted):
+        - 사용자 피드백 수집
+        - Long-term Memory 학습
+        - 패턴 업데이트
 ```
+
+**Memory 시스템**:
+- **Short-term Memory** (`app/services/memory_service.py`):
+  - 세션별 대화 히스토리 관리
+  - 최근 N개 상호작용 저장 (기본 10개)
+  - 컨텍스트 윈도우 자동 관리
+  - 오래된 세션 자동 정리
+
+- **Long-term Memory**:
+  - 사용자 선호도 (온도, 밝기 등)
+  - 시간대별 패턴 학습
+  - MongoDB 영구 저장
+  - 피드백 기반 학습
 
 **장점**:
 - ✅ 빠른 응답 속도 (단일 LLM 호출)
 - ✅ 간단한 구조 (에이전트 간 조율 불필요)
 - ✅ 유지보수 용이
 - ✅ MVP에 적합
+- ✅ **개인화된 추천** (Memory 활용)
+- ✅ **학습 능력** (피드백 기반)
+- ✅ **컨텍스트 유지** (대화 히스토리)
 
 **한계**:
 - ⚠️ 복잡한 다단계 추론 제한
 - ⚠️ 전문화된 처리 어려움
 - ⚠️ 병렬 처리 불가
+- ⚠️ Memory 크기 제한 (Short-term: 10개, 설정 가능)
 
 ---
 
@@ -179,14 +237,27 @@ async def generate_device_recommendation(device_info, context):
 
 ## API 엔드포인트 설계
 
-### 기존 엔드포인트 확장
+### 현재 구현된 엔드포인트
 
+#### Gaze Control
 ```
 POST /api/gaze/track → POST /gaze_data
+POST /api/gaze/click - 클릭된 IoT 기기에 대한 추천 생성 (Pull 방식)
+GET /api/gaze/status - 시선 추적 시스템 상태 확인
+```
+
+#### Device Control
+```
 GET /api/devices/ → GET /main_control_devices
 ```
 
-### 새로 추가할 엔드포인트
+#### Scheduler (신규)
+```
+GET /api/scheduler/status - 능동적 추천 스케줄러 상태 조회
+POST /api/scheduler/trigger - 능동적 추천 즉시 실행 (테스트용)
+```
+
+### 향후 추가 예정 엔드포인트
 
 ```
 GET /ai_recommendation
@@ -281,4 +352,69 @@ GET /personalized_settings
 - **사용자 제어**: AI 추천 시스템의 투명성 및 사용자 제어권 보장
 - **악의적 사용 방지**: 시스템 오남용 및 조작 시도 탐지
 
+## 능동적 추천 시스템 (Proactive Recommendation)
+
+### 개요
+
+이전 Pull 방식에서는 하드웨어가 요청해야만 AI가 추천을 제공했지만, 새로운 Push 방식에서는 AI가 적절한 타이밍에 능동적으로 추천을 전송합니다.
+
+### Phase 1: 주기적 추천 (Periodic Recommendation) ✅ 구현 완료
+
+**구현 내용**:
+- APScheduler를 사용한 백그라운드 작업
+- 기본 30분마다 실행 (설정 가능)
+- 모든 활성 사용자에 대해 추천 생성 및 전송
+
+**주요 컴포넌트**:
+
+1. **ProactiveRecommendationService** (`app/services/proactive_recommendation_service.py`)
+   - 사용자별 능동적 추천 생성
+   - 컨텍스트 수집 (시간, 날씨, 사용자 메모리)
+   - LLM을 통한 추천 판단
+   - MongoDB에 추천 이력 저장
+
+2. **HardwareClient** (`app/services/hardware_client.py`)
+   - 하드웨어로 추천 전송
+   - HTTP POST 통신
+   - 타임아웃 및 에러 처리
+
+3. **RecommendationScheduler** (`app/core/scheduler.py`)
+   - APScheduler 관리
+   - 주기적 작업 실행
+   - 활성 사용자 목록 조회
+   - 스케줄러 상태 모니터링
+
+**설정 방법** (`.env` 또는 `app/core/config.py`):
+```
+PROACTIVE_RECOMMENDATION_ENABLED=true
+PROACTIVE_RECOMMENDATION_INTERVAL_MINUTES=30
+HARDWARE_ENDPOINT=http://localhost:8080/api/recommendations
+```
+
+**추천 로직**:
+- 현재 시간대, 날씨, 사용자 패턴 종합 분석
+- "추천할 만한 명확한 이유"가 있을 때만 추천 (should_recommend: true/false)
+- 한 번에 하나의 기기만 추천
+- 개인화된 메시지 생성
+
+### Phase 2: 이벤트 기반 추천 (Event-Driven) 🔜 예정
+
+**계획**:
+- 날씨 변화 감지 (폭우, 고온, 미세먼지)
+- 시간대 전환 감지
+- 일정 시작 전 알림
+- 기기 상태 변화 감지
+
+### Phase 3: 패턴 학습 기반 추천 (Pattern-Based) 🔜 예정
+
+**계획**:
+- Long-term Memory 활용
+- 사용자 루틴 학습
+- 예측적 추천 (사용자가 평소 이 시간에 무엇을 하는지)
+
+---
+
 이 아키텍처 문서는 GazeHome AI 에이전트 시스템의 설계 방향과 구현 계획을 담고 있으며, 개발 과정에서 지속적으로 업데이트될 예정입니다.
+
+**최근 업데이트**:
+- 2025-10-14: 능동적 추천 시스템 Phase 1 구현 완료

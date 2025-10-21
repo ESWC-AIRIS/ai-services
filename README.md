@@ -45,6 +45,7 @@ GazeHome AI 서버는 다음과 같은 흐름으로 작동합니다:
 - [`api_documentation.md`](Docs/api_documentation.md) - API 엔드포인트 문서 및 테스트 가이드
 - [`gazehome_architecture.md`](Docs/gazehome_architecture.md) - GazeHome AI 서버 아키텍처 및 구조 문서
 - [`agent_architecture.md`](Docs/agent_architecture.md) - GazeHome AI 에이전트 시스템 아키텍처 문서
+- [`memory_architecture.md`](Docs/memory_architecture.md) - **Agent Memory 시스템 (Short-term + Long-term)**
 - [`weather_mcp_guide.md`](Docs/weather_mcp_guide.md) - Weather MCP 구현 및 사용 가이드
 - [`git_convention.md`](Docs/git_convention.md) - Git 커밋 컨벤션 가이드
 - [`venv_and_requirements_guide.md`](Docs/venv_and_requirements_guide.md) - 가상환경 및 의존성 관리 가이드
