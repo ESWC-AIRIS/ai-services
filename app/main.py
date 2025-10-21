@@ -13,6 +13,7 @@ import pytz
 
 from app.core.config import settings
 from app.core.database import connect_to_mongo, close_mongo_connection
+from app.core.scheduler import get_scheduler
 from app.api.router import api_router
 from app.services.mongodb_service import mongodb_service
 
@@ -35,16 +36,36 @@ async def lifespan(app: FastAPI):
     # 시작 시
     logger.info("GazeHome AI Services 시작 중...")
     await connect_to_mongo()
-    logger.info("MongoDB 연결 완료")
     
-    # MongoDB 인덱스 생성
-    await mongodb_service.create_indexes()
-    logger.info("MongoDB 인덱스 생성 완료")
+    # MongoDB 인덱스 생성 (연결된 경우에만)
+    try:
+        await mongodb_service.create_indexes()
+        logger.info("MongoDB 인덱스 생성 완료")
+    except Exception as e:
+        logger.warning(f"MongoDB 인덱스 생성 실패 (MongoDB 없이 실행 중): {e}")
+    
+    # 능동적 추천 스케줄러 시작
+    if settings.PROACTIVE_RECOMMENDATION_ENABLED:
+        scheduler = get_scheduler()
+        scheduler.start(interval_minutes=settings.PROACTIVE_RECOMMENDATION_INTERVAL_MINUTES)
+        logger.info(
+            f"능동적 추천 스케줄러 시작 완료 "
+            f"(주기: {settings.PROACTIVE_RECOMMENDATION_INTERVAL_MINUTES}분)"
+        )
+    else:
+        logger.info("능동적 추천 기능 비활성화됨")
     
     yield
     
     # 종료 시
     logger.info("GazeHome AI Services 종료 중...")
+    
+    # 스케줄러 중지
+    if settings.PROACTIVE_RECOMMENDATION_ENABLED:
+        scheduler = get_scheduler()
+        scheduler.stop()
+        logger.info("능동적 추천 스케줄러 중지 완료")
+    
     await close_mongo_connection()
     logger.info("MongoDB 연결 종료")
 

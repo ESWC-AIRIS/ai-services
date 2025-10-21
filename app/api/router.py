@@ -4,7 +4,7 @@ API 엔드포인트 라우터 설정
 """
 
 from fastapi import APIRouter
-from app.api.endpoints import gaze, context, automation, devices
+from app.api.endpoints import gaze, context, automation, devices, scheduler, recommendations, demo
 
 # API 라우터 생성
 api_router = APIRouter()
@@ -32,4 +32,22 @@ api_router.include_router(
     devices.router,
     prefix="/devices",
     tags=["device-control"]
+)
+
+api_router.include_router(
+    scheduler.router,
+    prefix="/scheduler",
+    tags=["scheduler"]
+)
+
+api_router.include_router(
+    recommendations.router,
+    prefix="/recommendations",
+    tags=["recommendations"]
+)
+
+api_router.include_router(
+    demo.router,
+    prefix="/demo",
+    tags=["demo"]
 )

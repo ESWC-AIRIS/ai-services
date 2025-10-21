@@ -27,8 +27,10 @@ async def connect_to_mongo():
         logger.info(f"MongoDB 연결 성공: {settings.MONGODB_DATABASE}")
         
     except Exception as e:
-        logger.error(f"MongoDB 연결 실패: {e}")
-        raise
+        logger.warning(f"MongoDB 연결 실패: {e}")
+        logger.warning("MongoDB 없이 서버를 시작합니다. 일부 기능이 제한될 수 있습니다.")
+        client = None
+        database = None
 
 
 async def close_mongo_connection():

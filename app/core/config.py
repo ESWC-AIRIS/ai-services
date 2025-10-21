@@ -45,6 +45,16 @@ class Settings(BaseSettings):
     WEATHER_API_KEY: Optional[str] = None
     CALENDAR_API_KEY: Optional[str] = None
     
+    # 하드웨어 통신 설정
+    HARDWARE_ENDPOINT: str = "http://localhost:8080/api/recommendations"
+    
+    # IoT 기기 제어 API 설정
+    IOT_API_ENDPOINT: str = "http://localhost:8080/api/devices"
+    
+    # 능동적 추천 설정
+    PROACTIVE_RECOMMENDATION_ENABLED: bool = True
+    PROACTIVE_RECOMMENDATION_INTERVAL_MINUTES: int = 30  # 30분마다
+    
     # 로깅 설정
     LOG_LEVEL: str = "INFO"
     
