@@ -160,19 +160,10 @@ async def send_smart_recommendation(request: RecommendationRequest):
         logger.info(f"  - 제목: \"{request.title}\"")
         logger.info(f"  - 내용: \"{request.contents}\"")
         
-        # AI가 스마트 추천 생성 (요청된 내용을 기반으로)
-        ai_recommendation = await ai_service.generate_smart_recommendation(
-            context=f"사용자 요청: {request.title} - {request.contents}"
-        )
-        
-        logger.info(f"🧠 AI 추천 생성:")
-        logger.info(f"  - AI 제목: \"{ai_recommendation['title']}\"")
-        logger.info(f"  - AI 내용: \"{ai_recommendation['contents']}\"")
-        
-        # 하드웨어로 AI 추천 전송
+        # 하드웨어로 추천 전송
         hardware_response = await hardware_client.send_recommendation(
-            title=ai_recommendation['title'],
-            contents=ai_recommendation['contents']
+            title=request.title,
+            contents=request.contents
         )
         
         # 응답 검증

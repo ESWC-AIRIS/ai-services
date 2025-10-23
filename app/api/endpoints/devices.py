@@ -5,10 +5,15 @@ LG 스마트기기 제어 관련 API 엔드포인트 (명세서에 맞춤)
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import Dict, Any
+from typing import Dict, Any, List
 import logging
 import httpx
 from app.core.config import *
+from app.models.device_management import (
+    DeviceRegistrationRequest, DeviceRegistrationResponse, 
+    DeviceListResponse, DeviceType, get_supported_actions
+)
+from app.services.device_service import device_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -78,25 +83,89 @@ class GatewayClient:
 gateway_client = GatewayClient()
 
 
+@router.post("/register", response_model=DeviceRegistrationResponse)
+async def register_device(request: DeviceRegistrationRequest):
+    """
+    기기 등록 API
+    사용자의 기기를 시스템에 등록합니다.
+    """
+    try:
+        # 기본 사용자 ID (MVP에서는 단일 사용자)
+        user_id = "default_user"
+        
+        # 기기 등록
+        device = await device_service.register_device(user_id, request)
+        
+        logger.info(f"기기 등록 완료: {device.device_id}")
+        
+        return DeviceRegistrationResponse(
+            message="기기 등록이 완료되었습니다",
+            device_id=device.device_id
+        )
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"기기 등록 실패: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"기기 등록 실패: {str(e)}"
+        )
+
+
+@router.get("/devices", response_model=DeviceListResponse)
+async def get_user_devices():
+    """
+    사용자 기기 목록 조회 API
+    등록된 모든 기기를 조회합니다.
+    """
+    try:
+        # 기본 사용자 ID (MVP에서는 단일 사용자)
+        user_id = "default_user"
+        
+        # 기기 목록 조회
+        devices = await device_service.get_user_devices(user_id)
+        
+        logger.info(f"기기 목록 조회: {len(devices)}개")
+        
+        return DeviceListResponse(devices=devices)
+        
+    except Exception as e:
+        logger.error(f"기기 목록 조회 실패: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"기기 목록 조회 실패: {str(e)}"
+        )
+
+
 @router.post("/control", response_model=LGControlResponse)
 async def control_lg_device(request: LGControlRequest):
     """
-    HW → AI: 스마트기기 단순 제어 (명세서)
     AI → Gateway: LG Thinq 조작 (명세서)
     
-    하드웨어에서 직접 제어 요청이 오면 AI가 처리 후 Gateway로 전달합니다.
+    AI가 Gateway를 통해 LG 기기를 제어합니다.
     """
     try:
-        # 액션 유효성 검사
-        valid_actions = ["turn_on", "turn_off", "clean", "auto", "dryer_on", "dryer_off"]
-        if request.action not in valid_actions:
+        # 기본 사용자 ID (MVP에서는 단일 사용자)
+        user_id = "default_user"
+        
+        # 등록된 기기인지 확인
+        device = await device_service.get_device_by_id(user_id, request.device_id)
+        if not device:
             raise HTTPException(
-                status_code=400,
-                detail=f"잘못된 액션입니다. 가능한 액션: {valid_actions}"
+                status_code=404,
+                detail=f"기기 {request.device_id}를 찾을 수 없습니다"
             )
         
-        logger.info(f"📱 HW → AI 제어 요청 수신:")
-        logger.info(f"  - 기기: {request.device_id}")
+        # 액션 유효성 검사
+        if request.action not in device.supported_actions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"잘못된 액션입니다. 가능한 액션: {device.supported_actions}"
+            )
+        
+        logger.info(f"🚀 AI → Gateway 기기 제어:")
+        logger.info(f"  - 기기: {request.device_id} ({device.alias})")
         logger.info(f"  - 액션: {request.action}")
         
         # Gateway로 제어 요청 전달
@@ -106,7 +175,7 @@ async def control_lg_device(request: LGControlRequest):
         )
         
         return LGControlResponse(
-            message="[AI] 스마트 기기 단순 제어 완료"
+            message="[GATEWAY] 스마트 기기 제어 완료"
         )
         
     except HTTPException:

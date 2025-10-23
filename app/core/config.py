@@ -9,52 +9,52 @@ import os
 # .env 파일 로드
 load_dotenv()
 
-# 환경변수에서 설정값 가져오기 (하드코딩 제거)
-APP_NAME = os.getenv("APP_NAME")
-APP_VERSION = os.getenv("APP_VERSION")
+# =============================================================================
+# 애플리케이션 설정
+# =============================================================================
+APP_NAME = "GazeHome AI Services"
+APP_VERSION = "1.0.0"
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
+# =============================================================================
 # 서버 설정
-HOST = os.getenv("HOST")
+# =============================================================================
+HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
 
 # CORS 설정
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 
-# MongoDB 설정
+# =============================================================================
+# MongoDB Atlas 설정
+# =============================================================================
 MONGODB_URL = os.getenv("MONGODB_URL")
-MONGODB_DATABASE = os.getenv("MONGODB_DATABASE")
+MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "gazehome")
 
-# Gemini API 설정
+# =============================================================================
+# AI API 설정
+# =============================================================================
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL")
+GEMINI_MODEL = "gemini-2.0-flash"
 
-# Vector DB 설정 (ChromaDB)
-VECTOR_DB_PATH = os.getenv("VECTOR_DB_PATH")
+# =============================================================================
+# 외부 API 엔드포인트
+# =============================================================================
+# Gateway 서버 (LG 기기 제어)
+GATEWAY_ENDPOINT = os.getenv("GATEWAY_ENDPOINT", "http://localhost:9000/api/lg/control")
 
-# LangSmith/LangFuse 설정
-LANGSMITH_API_KEY = os.getenv("LANGSMITH_API_KEY")
-LANGSMITH_PROJECT = os.getenv("LANGSMITH_PROJECT")
-LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY")
-LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY")
-LANGFUSE_HOST = os.getenv("LANGFUSE_HOST")
+# 하드웨어 서버 (사용자 추천)
+HARDWARE_ENDPOINT = os.getenv("HARDWARE_ENDPOINT", "http://localhost:8080/api/recommendations")
 
-# 외부 API 설정
-WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
-CALENDAR_API_KEY = os.getenv("CALENDAR_API_KEY")
+# =============================================================================
+# Mock 서버 설정 (개발용)
+# =============================================================================
+GATEWAY_PORT = int(os.getenv("GATEWAY_PORT", "9000"))
+HARDWARE_PORT = int(os.getenv("HARDWARE_PORT", "8080"))
+GATEWAY_HOST = os.getenv("GATEWAY_HOST", "0.0.0.0")
+HARDWARE_HOST = os.getenv("HARDWARE_HOST", "0.0.0.0")
 
-# 하드웨어 통신 설정
-HARDWARE_ENDPOINT = os.getenv("HARDWARE_ENDPOINT")
-
-# IoT 기기 제어 API 설정
-IOT_API_ENDPOINT = os.getenv("IOT_API_ENDPOINT")
-
-# Gateway 통신 설정
-GATEWAY_ENDPOINT = os.getenv("GATEWAY_ENDPOINT")
-
-# 능동적 추천 설정
-PROACTIVE_RECOMMENDATION_ENABLED = os.getenv("PROACTIVE_RECOMMENDATION_ENABLED", "true").lower() == "true"
-PROACTIVE_RECOMMENDATION_INTERVAL_MINUTES = int(os.getenv("PROACTIVE_RECOMMENDATION_INTERVAL_MINUTES", "30"))
-
+# =============================================================================
 # 로깅 설정
+# =============================================================================
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

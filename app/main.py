@@ -12,6 +12,7 @@ from datetime import datetime
 import pytz
 from app.core.config import *
 from app.api.router import api_router
+from app.services.device_service import device_service
 
 # 한국 시간대 설정
 KST = pytz.timezone('Asia/Seoul')
@@ -33,11 +34,20 @@ async def lifespan(app: FastAPI):
     logger.info(f"서버 설정: {HOST}:{PORT}")
     logger.info(f"Gateway 엔드포인트: {GATEWAY_ENDPOINT}")
     logger.info(f"하드웨어 엔드포인트: {HARDWARE_ENDPOINT}")
+    logger.info(f"MongoDB 데이터베이스: {MONGODB_DATABASE}")
+    
+    # MongoDB 연결
+    try:
+        await device_service.connect()
+        logger.info("MongoDB 연결 완료")
+    except Exception as e:
+        logger.warning(f"MongoDB 연결 실패: {e}")
     
     yield
     
     # 종료 시
     logger.info("GazeHome AI Services 종료 중...")
+    await device_service.disconnect()
 
 
 # FastAPI 앱 생성
