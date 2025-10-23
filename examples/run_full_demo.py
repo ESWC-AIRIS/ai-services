@@ -1,9 +1,9 @@
 """
-GazeHome AI Services - 데모 실행 스크립트
-전체 시스템 데모를 실행하는 통합 스크립트
+GazeHome AI Services - 통합 데모 실행 스크립트
+API 명세서에 맞는 완전한 데모 시스템 실행
 
 실행 방법:
-    PYTHONPATH=. python examples/run_demo.py
+    PYTHONPATH=. python examples/run_full_demo.py
 """
 import asyncio
 import subprocess
@@ -12,11 +12,16 @@ import signal
 import sys
 from datetime import datetime
 import pytz
+from dotenv import load_dotenv
+import os
+
+# .env 파일 로드
+load_dotenv()
 
 KST = pytz.timezone('Asia/Seoul')
 
-class DemoRunner:
-    """데모 실행 관리자"""
+class FullDemoRunner:
+    """통합 데모 실행 관리자"""
     
     def __init__(self):
         self.processes = []
@@ -27,7 +32,7 @@ class DemoRunner:
         print("🤖 AI 서버 시작 중...")
         try:
             process = subprocess.Popen([
-                "python", "main.py", "--mode", "gcp-dev"
+                "python", "main.py"
             ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             self.processes.append(("AI Server", process))
             print("✅ AI 서버 시작 완료 (포트 8000)")
@@ -41,7 +46,7 @@ class DemoRunner:
         print("🔧 Mock 서버들 시작 중...")
         try:
             process = subprocess.Popen([
-                "python", "examples/mock_servers.py"
+                "python", "examples/mock_servers_simple.py"
             ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             self.processes.append(("Mock Servers", process))
             print("✅ Mock 서버들 시작 완료 (포트 8080, 9000)")
@@ -50,12 +55,12 @@ class DemoRunner:
             print(f"❌ Mock 서버들 시작 실패: {e}")
             return False
     
-    async def run_tests(self):
-        """테스트 실행"""
-        print("🧪 MVP 시스템 테스트 실행...")
+    async def run_api_tests(self):
+        """API 테스트 실행"""
+        print("🧪 API 명세서 데모 테스트 실행...")
         try:
             result = subprocess.run([
-                "python", "examples/test_mvp_system.py"
+                "python", "examples/test_api_spec_demo.py"
             ], capture_output=True, text=True)
             
             print("📊 테스트 결과:")
@@ -94,11 +99,11 @@ class DemoRunner:
 async def main():
     """메인 데모 실행"""
     print('\n' + '='*60)
-    print('🚀 GazeHome AI MVP 시스템 데모')
+    print('🚀 GazeHome AI API 명세서 통합 데모')
     print('='*60)
     print(f'⏰ 시작 시간: {datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")}')
     
-    runner = DemoRunner()
+    runner = FullDemoRunner()
     
     # 시그널 핸들러 등록
     signal.signal(signal.SIGINT, runner.signal_handler)
@@ -120,25 +125,26 @@ async def main():
         print("\n⏳ 서버들 시작 대기 중... (10초)")
         await asyncio.sleep(10)
         
-        # 4. 테스트 실행
+        # 4. API 테스트 실행
         print("\n" + "="*60)
-        print("🧪 MVP 시스템 테스트 시작")
+        print("🧪 API 명세서 데모 테스트 시작")
         print("="*60)
         
-        test_success = await runner.run_tests()
+        test_success = await runner.run_api_tests()
         
         # 5. 결과 출력
         print("\n" + "="*60)
-        print("📊 데모 결과")
+        print("📊 통합 데모 결과")
         print("="*60)
         
         if test_success:
-            print("🎉 데모 성공!")
+            print("🎉 통합 데모 성공!")
             print("  ✅ AI 서버 정상 작동")
-            print("  ✅ HW-AI-Gateway 통신 성공")
-            print("  ✅ 다양한 시나리오 테스트 통과")
+            print("  ✅ Mock 서버들 정상 작동")
+            print("  ✅ API 명세서 테스트 통과")
+            print("  ✅ 통합 시나리오 테스트 통과")
         else:
-            print("⚠️ 데모 일부 실패")
+            print("⚠️ 통합 데모 일부 실패")
             print("  위의 오류 메시지를 확인해주세요.")
         
         print(f"\n⏰ 완료 시간: {datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")}")
@@ -154,7 +160,7 @@ async def main():
         print(f"\n❌ 데모 실행 중 오류: {e}")
     finally:
         runner.cleanup()
-        print("\n👋 데모 종료")
+        print("\n👋 통합 데모 종료")
 
 
 if __name__ == "__main__":

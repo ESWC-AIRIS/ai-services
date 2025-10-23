@@ -250,3 +250,4 @@ PYTHONPATH=. python examples/test_mvp_system.py
 ---
 
 **GazeHome AI MVP 시스템** - 깔끔하고 효율적인 HW-AI-Gateway 통신 🚀
+

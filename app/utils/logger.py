@@ -7,7 +7,7 @@ import logging
 import sys
 from datetime import datetime
 import pytz
-from app.core.config import settings
+from app.core.config import *
 
 # 한국 시간대 설정
 KST = pytz.timezone('Asia/Seoul')
@@ -29,7 +29,7 @@ class KSTFormatter(logging.Formatter):
 def setup_logger(name: str = "gazehome") -> logging.Logger:
     """로거 설정"""
     logger = logging.getLogger(name)
-    logger.setLevel(getattr(logging, settings.LOG_LEVEL.upper()))
+    logger.setLevel(getattr(logging, LOG_LEVEL.upper()))
     
     # 기존 핸들러 제거
     for handler in logger.handlers[:]:
@@ -37,7 +37,7 @@ def setup_logger(name: str = "gazehome") -> logging.Logger:
     
     # 콘솔 핸들러 설정
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(getattr(logging, settings.LOG_LEVEL.upper()))
+    console_handler.setLevel(getattr(logging, LOG_LEVEL.upper()))
     
     # 포맷터 설정
     formatter = KSTFormatter(

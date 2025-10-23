@@ -18,8 +18,8 @@ import os
 # .env 파일 로드
 load_dotenv()
 
-AI_SERVER_URL = os.getenv("AI_SERVER_URL", "http://localhost:8000")
-GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:9000")
+AI_SERVER_URL = os.getenv("AI_SERVER_URL")
+GATEWAY_URL = os.getenv("GATEWAY_URL")
 
 KST = pytz.timezone('Asia/Seoul')
 

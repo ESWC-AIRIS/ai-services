@@ -1,162 +1,198 @@
 """
-GazeHome AI Services - Recommendation Response Endpoints
-하드웨어로부터 사용자 응답을 받는 API 엔드포인트
+GazeHome AI Services - Recommendations Endpoints
+AI → HW 추천 시스템 API 엔드포인트 (명세서에 맞춤)
 """
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional
-from datetime import datetime
-import pytz
-
-from app.services.device_control_service import get_device_control_service
-from app.services.llm_service import LLMService
-from app.services.mongodb_service import MongoDBService
+from typing import Dict, Any
+import logging
+import httpx
+import google.generativeai as genai
+from app.core.config import *
 
 router = APIRouter()
-KST = pytz.timezone('Asia/Seoul')
+logger = logging.getLogger(__name__)
 
-# 서비스 인스턴스
-device_control_service = get_device_control_service()
-llm_service = LLMService()
-db_service = MongoDBService()
+
+class RecommendationRequest(BaseModel):
+    """AI → HW 추천 요청 (명세서)"""
+    title: str = Field(..., description="추천 제목 (예: 에어컨 킬까요?)")
+    contents: str = Field(..., description="추천 내용")
 
 
 class RecommendationResponse(BaseModel):
-    """하드웨어로부터 받는 사용자 응답"""
-    user_id: str
-    recommendation_id: Optional[str] = None  # 추천 ID (있으면)
-    accepted: bool  # True: 네(수락), False: 아니요(거부)
-    device_id: str  # 추천된 기기 ID
-    action: Dict[str, Any]  # 추천된 액션
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(KST))
-
-
-class RecommendationResponseResult(BaseModel):
-    """응답 처리 결과"""
-    status: str
+    """AI → HW 추천 응답 (명세서)"""
     message: str
-    executed: bool  # 기기 제어 실행 여부
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(KST))
+    confirm: str = Field(..., description="사용자 확인 (YES/NO)")
 
 
-@router.post("/response", response_model=RecommendationResponseResult)
-async def handle_recommendation_response(response: RecommendationResponse):
-    """
-    하드웨어로부터 사용자 응답 수신 및 처리
+class HardwareClient:
+    """하드웨어 통신 클라이언트"""
     
-    사용자가 추천을 수락(Y)하면 → 기기 제어 실행
-    사용자가 추천을 거부(N)하면 → 피드백 학습
-    """
-    try:
-        logger_prefix = f"[{response.user_id}]"
-        
-        if response.accepted:
-            # ✅ 수락: 기기 제어 실행
-            logger.info(f"{logger_prefix} ✅ 사용자가 추천 수락")
-            logger.info(f"{logger_prefix} 기기 제어 실행 중...")
+    def __init__(self, hardware_endpoint: str = HARDWARE_ENDPOINT):
+        self.hardware_endpoint = hardware_endpoint
+        self.timeout = 10.0
+        logger.info(f"HardwareClient 초기화: endpoint={self.hardware_endpoint}")
+    
+    async def send_recommendation(self, title: str, contents: str) -> Dict[str, Any]:
+        """하드웨어로 추천 전송"""
+        try:
+            payload = {
+                "title": title,
+                "contents": contents
+            }
             
-            # 기기 제어 실행
-            executed = await device_control_service.execute_device_command(
-                device_id=response.device_id,
-                command=response.action.get('command'),
-                parameters=response.action.get('parameters', {})
-            )
+            logger.info(f"🚀 하드웨어로 추천 전송:")
+            logger.info(f"  - 제목: \"{title}\"")
+            logger.info(f"  - 내용: \"{contents}\"")
             
-            if executed:
-                logger.info(f"{logger_prefix} ✅ 기기 제어 성공!")
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    self.hardware_endpoint,
+                    json=payload,
+                    headers={"Content-Type": "application/json"}
+                )
                 
-                # Long-term Memory에 긍정적 피드백 학습
-                try:
-                    await llm_service.memory.long_term.learn_from_interaction(
-                        user_id=response.user_id,
-                        interaction={
-                            'device_id': response.device_id,
-                            'action': response.action.get('command'),
-                            'accepted': True,
-                            'timestamp': response.timestamp
-                        }
+                if response.status_code == 200:
+                    result = response.json()
+                    confirm = result.get('confirm', 'NO')
+                    logger.info(f"✅ 하드웨어 응답 수신: {confirm}")
+                    return result
+                else:
+                    logger.error(f"❌ 하드웨어 통신 실패: status={response.status_code}")
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"하드웨어 통신 실패: {response.text}"
                     )
-                    logger.info(f"{logger_prefix} 긍정적 피드백 학습 완료")
-                except Exception as e:
-                    logger.warning(f"{logger_prefix} 피드백 학습 실패: {e}")
-                
-                return RecommendationResponseResult(
-                    status="success",
-                    message="추천이 수락되었고 기기 제어가 완료되었습니다.",
-                    executed=True,
-                    timestamp=datetime.now(KST)
-                )
-            else:
-                logger.error(f"{logger_prefix} ❌ 기기 제어 실패")
-                return RecommendationResponseResult(
-                    status="partial_success",
-                    message="추천은 수락되었으나 기기 제어에 실패했습니다.",
-                    executed=False,
-                    timestamp=datetime.now(KST)
-                )
-        
-        else:
-            # ❌ 거부: 피드백 학습
-            logger.info(f"{logger_prefix} ❌ 사용자가 추천 거부")
-            
-            # Long-term Memory에 부정적 피드백 학습
-            try:
-                await llm_service.memory.long_term.learn_from_interaction(
-                    user_id=response.user_id,
-                    interaction={
-                        'device_id': response.device_id,
-                        'action': response.action.get('command'),
-                        'accepted': False,
-                        'timestamp': response.timestamp
-                    }
-                )
-                logger.info(f"{logger_prefix} 부정적 피드백 학습 완료")
-            except Exception as e:
-                logger.warning(f"{logger_prefix} 피드백 학습 실패: {e}")
-            
-            return RecommendationResponseResult(
-                status="success",
-                message="추천이 거부되었습니다. 피드백이 학습되었습니다.",
-                executed=False,
-                timestamp=datetime.now(KST)
-            )
+                    
+        except httpx.TimeoutException:
+            logger.error(f"하드웨어 통신 타임아웃: title={title}")
+            raise HTTPException(status_code=504, detail="하드웨어 통신 타임아웃")
+        except httpx.RequestError as e:
+            logger.error(f"하드웨어 통신 에러: {e}")
+            raise HTTPException(status_code=503, detail=f"하드웨어 통신 에러: {str(e)}")
+        except Exception as e:
+            logger.error(f"추천 전송 중 예외 발생: {e}")
+            raise HTTPException(status_code=500, detail=f"추천 전송 실패: {str(e)}")
+
+
+# Gemini AI 설정
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel('gemini-2.0-flash')
+else:
+    model = None
+
+# 하드웨어 클라이언트 인스턴스
+hardware_client = HardwareClient()
+
+class AIRecommendationService:
+    """AI 추천 서비스"""
     
-    except Exception as e:
-        logger.error(f"응답 처리 중 오류 발생: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"응답 처리 실패: {str(e)}"
-        )
+    def __init__(self):
+        self.model = model
+    
+    async def generate_smart_recommendation(self, context: str = None) -> Dict[str, str]:
+        """AI가 스마트 추천 생성"""
+        if not self.model:
+            # Gemini API가 없으면 기본 추천 반환
+            return {
+                "title": "스마트 홈 추천",
+                "contents": "현재 상황에 맞는 스마트 홈 기기 제어를 추천드립니다."
+            }
+        
+        try:
+            prompt = f"""
+            당신은 스마트 홈 AI 어시스턴트입니다. 
+            사용자의 현재 상황을 분석하여 적절한 기기 제어 추천을 해주세요.
+            
+            상황: {context or "일반적인 스마트 홈 환경"}
+            
+            다음 형식으로 응답해주세요:
+            제목: [추천 제목]
+            내용: [추천 내용]
+            
+            예시:
+            제목: 에어컨 킬까요?
+            내용: 현재 온도가 25도이므로 에어컨을 키시는 것을 추천드립니다.
+            """
+            
+            response = self.model.generate_content(prompt)
+            result = response.text.strip()
+            
+            # 응답 파싱
+            lines = result.split('\n')
+            title = "스마트 홈 추천"
+            contents = "현재 상황에 맞는 스마트 홈 기기 제어를 추천드립니다."
+            
+            for line in lines:
+                if line.startswith('제목:'):
+                    title = line.replace('제목:', '').strip()
+                elif line.startswith('내용:'):
+                    contents = line.replace('내용:', '').strip()
+            
+            return {
+                "title": title,
+                "contents": contents
+            }
+            
+        except Exception as e:
+            logger.error(f"AI 추천 생성 실패: {e}")
+            return {
+                "title": "스마트 홈 추천",
+                "contents": "현재 상황에 맞는 스마트 홈 기기 제어를 추천드립니다."
+            }
+
+# AI 추천 서비스 인스턴스
+ai_service = AIRecommendationService()
 
 
-@router.get("/history/{user_id}")
-async def get_recommendation_history(user_id: str):
+@router.post("/", response_model=RecommendationResponse)
+async def send_smart_recommendation(request: RecommendationRequest):
     """
-    사용자의 추천 이력 조회
+    AI → HW: 추천 문구 전달 (유저 컨펌용) (명세서)
     
-    Args:
-        user_id: 사용자 ID
-        
-    Returns:
-        추천 이력 목록
+    AI가 유저별 맞춤형 추천을 생성하여 하드웨어(유저)에게 허가를 요청합니다.
     """
     try:
-        # TODO: MongoDB에서 추천 이력 조회
-        # 현재는 예시 데이터 반환
-        return {
-            "status": "success",
-            "user_id": user_id,
-            "history": [],
-            "timestamp": datetime.now(KST).isoformat()
-        }
+        logger.info(f"🤖 AI → HW 추천 전송:")
+        logger.info(f"  - 제목: \"{request.title}\"")
+        logger.info(f"  - 내용: \"{request.contents}\"")
+        
+        # AI가 스마트 추천 생성 (요청된 내용을 기반으로)
+        ai_recommendation = await ai_service.generate_smart_recommendation(
+            context=f"사용자 요청: {request.title} - {request.contents}"
+        )
+        
+        logger.info(f"🧠 AI 추천 생성:")
+        logger.info(f"  - AI 제목: \"{ai_recommendation['title']}\"")
+        logger.info(f"  - AI 내용: \"{ai_recommendation['contents']}\"")
+        
+        # 하드웨어로 AI 추천 전송
+        hardware_response = await hardware_client.send_recommendation(
+            title=ai_recommendation['title'],
+            contents=ai_recommendation['contents']
+        )
+        
+        # 응답 검증
+        confirm = hardware_response.get('confirm', 'NO')
+        if confirm not in ['YES', 'NO']:
+            confirm = 'NO'  # 기본값
+        
+        return RecommendationResponse(
+            message="추천 문구 유저 피드백",
+            confirm=confirm
+        )
+        
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"추천 전송 실패: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"이력 조회 실패: {str(e)}"
+            detail=f"추천 전송 실패: {str(e)}"
         )
 
 
-import logging
-logger = logging.getLogger(__name__)
 
