@@ -7,7 +7,7 @@ GazeHome AI 서비스에 Weather MCP (Model Context Protocol) 서버를 구현�
 ## 🏗️ 구조
 
 ```
-RecommendationAgent (LLM Service)
+LLM Service
     ↓ MCP Protocol
 MCP Client
     ↓

@@ -17,4 +17,17 @@ Thumbs.db
 # Database
 *.db
 
+# Environment variables
 .env
+.env.local
+.env.production
+.env.staging
+
+# Security sensitive files - 모든 테스트 파일 제외
+examples/*.py
+examples/*.json
+
+# 데모용 파일만 유지 (아래 파일들은 예외)
+!examples/demo_*.py
+!examples/run_demo.py
+!examples/dev_auto_test.py
