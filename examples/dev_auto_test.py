@@ -1,9 +1,9 @@
 """
-GazeHome AI Services - 통합 데모 실행 스크립트
-API 명세서에 맞는 완전한 데모 시스템 실행
+GazeHome AI Services - 개발자용 자동 시스템 테스트
+개발자가 전체 시스템을 자동으로 검증하는 스크립트
 
 실행 방법:
-    PYTHONPATH=. python examples/run_full_demo.py
+    PYTHONPATH=. python examples/dev_auto_test.py
 """
 import asyncio
 import subprocess
@@ -99,7 +99,7 @@ class FullDemoRunner:
 async def main():
     """메인 데모 실행"""
     print('\n' + '='*60)
-    print('🚀 GazeHome AI API 명세서 통합 데모')
+    print('🔧 GazeHome AI Services - 개발자용 자동 테스트')
     print('='*60)
     print(f'⏰ 시작 시간: {datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")}')
     
@@ -127,40 +127,40 @@ async def main():
         
         # 4. API 테스트 실행
         print("\n" + "="*60)
-        print("🧪 API 명세서 데모 테스트 시작")
+        print("🧪 개발자용 API 테스트 시작")
         print("="*60)
         
         test_success = await runner.run_api_tests()
         
         # 5. 결과 출력
         print("\n" + "="*60)
-        print("📊 통합 데모 결과")
+        print("📊 개발자용 테스트 결과")
         print("="*60)
         
         if test_success:
-            print("🎉 통합 데모 성공!")
+            print("🎉 개발자용 테스트 성공!")
             print("  ✅ AI 서버 정상 작동")
             print("  ✅ Mock 서버들 정상 작동")
             print("  ✅ API 명세서 테스트 통과")
             print("  ✅ 통합 시나리오 테스트 통과")
         else:
-            print("⚠️ 통합 데모 일부 실패")
+            print("⚠️ 개발자용 테스트 일부 실패")
             print("  위의 오류 메시지를 확인해주세요.")
         
         print(f"\n⏰ 완료 시간: {datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")}")
         
         # 6. 대기 (사용자가 결과를 확인할 수 있도록)
-        print("\n🔄 데모 완료. 30초 후 자동 종료됩니다...")
+        print("\n🔄 개발자용 테스트 완료. 30초 후 자동 종료됩니다...")
         print("   (수동 종료: Ctrl+C)")
         await asyncio.sleep(30)
         
     except KeyboardInterrupt:
-        print("\n🛑 사용자에 의해 데모 중단")
+        print("\n🛑 사용자에 의해 테스트 중단")
     except Exception as e:
-        print(f"\n❌ 데모 실행 중 오류: {e}")
+        print(f"\n❌ 테스트 실행 중 오류: {e}")
     finally:
         runner.cleanup()
-        print("\n👋 통합 데모 종료")
+        print("\n👋 개발자용 테스트 종료")
 
 
 if __name__ == "__main__":

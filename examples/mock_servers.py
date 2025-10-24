@@ -23,7 +23,8 @@ KST = pytz.timezone('Asia/Seoul')
 hardware_app = FastAPI(title="Mock Hardware Server", version="1.0.0")
 
 class RecommendationRequest(BaseModel):
-    message: str
+    title: str
+    contents: str
 
 class RecommendationResponse(BaseModel):
     message: str
@@ -32,25 +33,42 @@ class RecommendationResponse(BaseModel):
 # 하드웨어 응답 시뮬레이션 데이터
 HARDWARE_RESPONSES = {
     "에어컨 킬까요?": {"confirm": "YES"},
-    "조명 끌까요?": {"confirm": "NO"},
-    "TV 켤까요?": {"confirm": "YES"},
+    "에어컨 끌까요?": {"confirm": "NO"},
     "공기청정기 켤까요?": {"confirm": "YES"},
+    "공기청정기 끌까요?": {"confirm": "NO"},
+    "건조기 켤까요?": {"confirm": "YES"},
+    "건조기 끌까요?": {"confirm": "NO"},
     "온도 낮출까요?": {"confirm": "NO"}
 }
 
 @hardware_app.post("/api/recommendations", response_model=RecommendationResponse)
 async def receive_recommendation(request: RecommendationRequest):
-    """AI에서 받은 추천에 대한 사용자 응답 시뮬레이션"""
-    logger.info(f"📱 하드웨어가 추천 수신: \"{request.message}\"")
+    """AI에서 받은 추천에 대한 실제 사용자 응답"""
+    logger.info(f"📱 하드웨어가 추천 수신:")
+    logger.info(f"  - 제목: \"{request.title}\"")
+    logger.info(f"  - 내용: \"{request.contents}\"")
     
-    # 시뮬레이션된 사용자 응답
-    response = HARDWARE_RESPONSES.get(request.message, {"confirm": "NO"})
+    # 실제 사용자 입력 받기
+    print(f"\n🤖 AI 추천: {request.title}")
+    print(f"📄 내용: {request.contents}")
+    print(f"\n❓ 이 추천을 실행하시겠습니까?")
     
-    logger.info(f"👤 사용자 응답: {response['confirm']}")
+    while True:
+        try:
+            user_input = input("YES/NO 입력: ").strip().upper()
+            if user_input in ["YES", "NO"]:
+                break
+            else:
+                print("❌ YES 또는 NO만 입력하세요.")
+        except KeyboardInterrupt:
+            user_input = "NO"
+            break
+    
+    logger.info(f"👤 사용자 응답: {user_input}")
     
     return RecommendationResponse(
-        message="추천 문구 유저 피드백",
-        confirm=response["confirm"]
+        message=f"사용자 응답: {user_input}",
+        confirm=user_input
     )
 
 @hardware_app.get("/health")
@@ -74,14 +92,120 @@ async def control_device(request: ControlRequest):
     logger.info(f"  - 기기: {request.device_id}")
     logger.info(f"  - 액션: {request.action}")
     
-    # 시뮬레이션된 제어 실행
-    await asyncio.sleep(0.5)  # 제어 지연 시뮬레이션
+    # 실제 제어 시뮬레이션
+    print(f"\n🔧 Gateway 기기 제어 실행:")
+    print(f"  📱 기기 ID: {request.device_id}")
+    print(f"  ⚡ 액션: {request.action}")
+    print(f"  🔄 제어 중...")
     
-    logger.info(f"✅ 기기 제어 완료: {request.device_id} -> {request.action}")
+    # 시뮬레이션된 제어 실행 (더 현실적인 지연)
+    await asyncio.sleep(1.0)  # 제어 지연 시뮬레이션
     
-    return ControlResponse(
-        message="[GATEWAY] 스마트 기기 제어 완료"
-    )
+    # 기기별 응답 메시지 생성
+    device_type = "알 수 없는 기기"
+    if "air_purifier" in request.device_id or "공기청정기" in request.device_id:
+        device_type = "공기청정기"
+    elif "dryer" in request.device_id or "건조기" in request.device_id:
+        device_type = "건조기"
+    elif "ac" in request.device_id or "에어컨" in request.device_id:
+        device_type = "에어컨"
+    elif "washer" in request.device_id or "트롬" in request.device_id:
+        device_type = "트롬 세탁기"
+    
+    action_text = "켜기" if request.action == "turn_on" else "끄기" if request.action == "turn_off" else request.action
+    
+    print(f"  ✅ {device_type} {action_text} 완료!")
+    logger.info(f"✅ 기기 제어 완료: {device_type} -> {action_text}")
+    
+    message = f"[GATEWAY] {device_type} {action_text} 제어 완료"
+    
+    return ControlResponse(message=message)
+
+@gateway_app.get("/api/lg/devices")
+async def get_devices():
+    """Gateway에서 사용 가능한 기기 목록 조회 (Mock 데이터)"""
+    import hashlib
+    import time
+    
+    # 동적으로 Mock 기기 ID 생성 (보안 강화)
+    base_time = int(time.time())
+    mock_devices = [
+        {
+            "deviceId": hashlib.sha256(f"mock_ac_{base_time}".encode()).hexdigest(),
+            "deviceInfo": {
+                "deviceType": "DEVICE_AIR_CONDITIONER",
+                "modelName": "MOCK_AC_MODEL",
+                "alias": "Mock 에어컨",
+                "reportable": True
+            }
+        },
+        {
+            "deviceId": hashlib.sha256(f"mock_washer_{base_time}".encode()).hexdigest(),
+            "deviceInfo": {
+                "deviceType": "DEVICE_WASHER",
+                "modelName": "MOCK_WASHER_MODEL",
+                "alias": "Mock 세탁기",
+                "reportable": True
+            }
+        },
+        {
+            "deviceId": hashlib.sha256(f"mock_purifier_{base_time}".encode()).hexdigest(),
+            "deviceInfo": {
+                "deviceType": "DEVICE_AIR_PURIFIER",
+                "modelName": "MOCK_PURIFIER_MODEL",
+                "alias": "Mock 공기청정기",
+                "reportable": True
+            }
+        },
+        {
+            "deviceId": hashlib.sha256(f"mock_dryer_{base_time}".encode()).hexdigest(),
+            "deviceInfo": {
+                "deviceType": "DEVICE_DRYER",
+                "modelName": "MOCK_DRYER_MODEL",
+                "alias": "Mock 건조기",
+                "reportable": True
+            }
+        }
+    ]
+    
+    return {
+        "messageId": "mock_gateway_response",
+        "timestamp": "2025-10-24T02:05:38.733113",
+        "response": mock_devices
+    }
+
+@gateway_app.get("/api/lg/devices/{device_id}/profile")
+async def get_device_profile(device_id: str):
+    """특정 기기의 프로필 정보 조회"""
+    return {
+        "messageId": "eW9neXVpX3RoaW5nX2FwaV",
+        "timestamp": "2025-10-24T02:06:14.401382",
+        "response": {
+            "property": {
+                "runState": {
+                    "currentState": {
+                        "type": "enum",
+                        "mode": ["r"],
+                        "value": {"r": ["DETECTING", "RUNNING", "ERROR", "INITIAL", "POWER_OFF", "COOLING", "WRINKLE_CARE", "RESERVED", "END", "PAUSE"]}
+                    }
+                },
+                "operation": {
+                    "dryerOperationMode": {
+                        "type": "enum",
+                        "mode": ["w"],
+                        "value": {"w": ["START", "STOP", "POWER_OFF", "POWER_ON"]}
+                    }
+                },
+                "remoteControlEnable": {
+                    "remoteControlEnabled": {
+                        "type": "boolean",
+                        "mode": ["r"],
+                        "value": {"r": [False, True]}
+                    }
+                }
+            }
+        }
+    }
 
 @gateway_app.get("/health")
 async def gateway_health():
