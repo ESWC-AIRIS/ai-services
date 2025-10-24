@@ -173,8 +173,11 @@ class AIRecommendationService:
                 }}
             }}
             
-            device_type 옵션: air_conditioner, air_purifier, dryer, washer, light
-            action 옵션: turn_on, turn_off, clean, auto
+            device_type 옵션: air_conditioner, air_purifier, dryer
+            action 옵션: 
+            - 에어컨: aircon_on, aircon_off, temp_24, temp_25, temp_26 등
+            - 공기청정기: turn_on, turn_off, clean, auto
+            - 건조기: dryer_on, dryer_off, dryer_start, dryer_stop
             
             중요: 
             - 등록된 기기 목록에 있는 기기만 추천하세요
@@ -301,7 +304,7 @@ class AIRecommendationService:
                 "can_control": True
             }
             
-            # runState 확인
+            # runState 확인 (Gateway에서 실제 값이 제공되지 않으므로 기본값 사용)
             run_state = property_info.get('runState', {})
             if run_state:
                 current_state = run_state.get('currentState', {})
@@ -310,6 +313,11 @@ class AIRecommendationService:
                     if state_values:
                         status_info["current_state"] = state_values[0] if state_values else "UNKNOWN"
                         status_info["is_running"] = status_info["current_state"] in ["RUNNING", "COOLING", "HEATING"]
+                    else:
+                        # Gateway에서 실제 상태 값을 제공하지 않으므로 기본값 사용
+                        status_info["current_state"] = "UNKNOWN"
+                        status_info["is_running"] = False
+                        logger.warning(f"⚠️ Gateway에서 기기 상태 값을 제공하지 않음: {device_id}")
             
             # remoteControlEnable 확인
             remote_control = property_info.get('remoteControlEnable', {})
@@ -360,8 +368,8 @@ class AIRecommendationService:
                     # 기기 상태 확인
                     device_status = await self._check_device_status(device_id)
                     
-                    # 상태 기반 스마트 액션 결정
-                    smart_action = self._determine_smart_action(action, device_status)
+                    # 상태 기반 스마트 액션 결정 (Gateway에서 실제 상태를 제공하지 않으므로 원래 액션 사용)
+                    smart_action = action  # 상태 확인 없이 원래 액션 사용
                     
                     logger.info(f"✅ AI 제어 정보로 기기 찾기 완료: {device_alias} -> {smart_action}")
                     logger.info(f"🎯 기기 상태: {device_status['current_state']} (실행중: {device_status['is_running']})")
@@ -405,7 +413,7 @@ class AIRecommendationService:
             logger.warning(f"⚠️ 기기 제어 불가능: {device_status['device_id']}")
         
         return original_action
-
+    
     async def _prepare_device_control(self, title: str, contents: str) -> Optional[Dict[str, Any]]:
         """추천 생성 시점에 제어 정보 미리 준비"""
         try:
@@ -431,7 +439,7 @@ class AIRecommendationService:
                     return {
                         "device_id": target_device['deviceId'],
                         "device_type": device_info['device_type'],
-                        "action": device_info['action'],
+                        "action": device_info['action'],  # AI가 생성한 액션 그대로 사용
                         "device_alias": target_device['deviceInfo']['alias']
                     }
                 else:

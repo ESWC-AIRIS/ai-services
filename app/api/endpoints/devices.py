@@ -113,7 +113,9 @@ class GatewayClient:
                 
                 if response.status_code == 200:
                     result = response.json()
-                    logger.info(f"✅ Gateway 제어 성공: {result.get('message')}")
+                    # Gateway 응답에서 message 또는 error 필드 확인
+                    response_message = result.get('message') or result.get('error', '제어 완료')
+                    logger.info(f"✅ Gateway 제어 성공: {response_message}")
                     return result
                 else:
                     logger.error(f"❌ Gateway 제어 실패: status={response.status_code}")

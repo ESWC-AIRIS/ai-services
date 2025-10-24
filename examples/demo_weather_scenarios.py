@@ -41,30 +41,15 @@ class DemoWeatherScenarios:
                     print(f"✅ AI 추천 생성 성공!")
                     print(f"💬 AI 응답: {result.get('message', 'N/A')}")
                     
-                    # 실제 사용자 입력 받기
-                    print(f"\n❓ 이 추천을 실행하시겠습니까?")
-                    while True:
-                        try:
-                            user_input = input("YES/NO 입력: ").strip().upper()
-                            if user_input in ["YES", "NO"]:
-                                break
-                            else:
-                                print("❌ YES 또는 NO만 입력하세요.")
-                        except KeyboardInterrupt:
-                            user_input = "NO"
-                            break
+                    # AI 서버가 Hardware 서버와 통신하여 사용자 응답을 받음
+                    print(f"\n🔄 AI 서버가 Hardware 서버와 통신 중...")
+                    print(f"📡 사용자 응답을 Hardware 서버에서 받습니다...")
                     
-                    print(f"👤 사용자 응답: {user_input}")
-                    
-                    # 사용자가 YES로 답한 경우 실제 기기 제어 실행
-                    if user_input == "YES" and result.get('device_control'):
+                    # AI 서버가 이미 Hardware 서버와 통신하여 제어까지 완료했음
+                    if result.get('device_control'):
                         device_info = result['device_control']
                         print(f"🎯 제어 정보: {device_info.get('device_alias')} -> {device_info.get('action')}")
-                        
-                        # Gateway를 통한 실제 기기 제어
-                        await self.execute_device_control(device_info)
-                    elif user_input == "NO":
-                        print("❌ 사용자가 추천을 거부했습니다.")
+                        print(f"✅ AI 서버가 Hardware 서버를 통해 사용자 응답을 받고 실제 Gateway로 기기 제어를 완료했습니다!")
                     else:
                         print("⚠️ 제어할 기기 정보가 없습니다.")
                 else:
@@ -78,43 +63,6 @@ class DemoWeatherScenarios:
         
         # 요청 간 간격 (서버 부하 방지)
         await asyncio.sleep(2)
-    
-    async def execute_device_control(self, device_info: Dict[str, Any]):
-        """Gateway를 통한 실제 기기 제어 실행"""
-        try:
-            device_id = device_info.get('device_id')
-            action = device_info.get('action')
-            device_alias = device_info.get('device_alias')
-            
-            if not device_id or not action:
-                print("❌ 기기 제어 정보가 불완전합니다.")
-                return
-            
-            print(f"\n🔧 Gateway를 통한 기기 제어 실행:")
-            print(f"  📱 기기: {device_alias} ({device_id})")
-            print(f"  ⚡ 액션: {action}")
-            print(f"  🔄 제어 중...")
-            
-            # Gateway 제어 API 호출
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    "http://localhost:9000/api/lg/control",
-                    json={
-                        "device_id": device_id,
-                        "action": action
-                    },
-                    headers={"Content-Type": "application/json"}
-                )
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    print(f"  ✅ {result.get('message', '기기 제어 완료')}")
-                else:
-                    print(f"  ❌ 기기 제어 실패: {response.status_code}")
-                    print(f"  오류: {response.text}")
-                    
-        except Exception as e:
-            print(f"❌ 기기 제어 실행 중 오류 발생: {e}")
     
     async def run_all_scenarios(self):
         """모든 기상 시나리오 실행"""
