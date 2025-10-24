@@ -10,23 +10,7 @@ from bson import ObjectId
 from enum import Enum
 
 
-class PyObjectId(ObjectId):
-    """MongoDB ObjectId를 Pydantic과 호환되도록 하는 클래스"""
-    
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-    
-    @classmethod
-    def validate(cls, v, field=None):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
-    
-    @classmethod
-    def __get_pydantic_json_schema__(cls, field_schema):
-        field_schema.update(type="string")
-        return field_schema
+from app.models.user import PyObjectId
 
 
 class DeviceType(str, Enum):
@@ -45,7 +29,7 @@ class DeviceAction(BaseModel):
 
 class UserDevice(BaseModel):
     """사용자 기기 정보"""
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: PyObjectId = Field(default_factory=lambda: str(ObjectId()), alias="_id")
     user_id: str = Field(..., description="사용자 ID")
     device_id: str = Field(..., description="Gateway 기기 ID")
     device_type: DeviceType = Field(..., description="기기 타입")
@@ -56,7 +40,7 @@ class UserDevice(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     class Config:
-        allow_population_by_field_name = True
+        validate_by_name = True
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
 
