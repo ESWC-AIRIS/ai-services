@@ -40,19 +40,31 @@ GEMINI_MODEL = "gemini-2.0-flash"
 # =============================================================================
 # 외부 API 엔드포인트
 # =============================================================================
-# Gateway 서버 (LG 기기 제어)
-GATEWAY_ENDPOINT = os.getenv("GATEWAY_ENDPOINT", "http://localhost:9000/api/lg/control")
+# Gateway 서버 기본 URL
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:9000")
 
-# 하드웨어 서버 (사용자 추천)
-HARDWARE_ENDPOINT = os.getenv("HARDWARE_ENDPOINT", "http://localhost:8080/api/recommendations")
+# 하드웨어 서버 기본 URL  
+HARDWARE_URL = os.getenv("HARDWARE_URL", "http://localhost:8080")
+
+# API 엔드포인트 경로
+GATEWAY_CONTROL_ENDPOINT = f"{GATEWAY_URL}/api/lg/control"
+GATEWAY_DEVICES_ENDPOINT = f"{GATEWAY_URL}/api/lg/devices"
+HARDWARE_RECOMMENDATIONS_ENDPOINT = f"{HARDWARE_URL}/api/recommendations"
 
 # =============================================================================
-# Mock 서버 설정 (개발용)
+# Mock 서버 설정 (개발용 - examples/mock_servers.py에서만 사용)
 # =============================================================================
-GATEWAY_PORT = int(os.getenv("GATEWAY_PORT", "9000"))
-HARDWARE_PORT = int(os.getenv("HARDWARE_PORT", "8080"))
-GATEWAY_HOST = os.getenv("GATEWAY_HOST", "0.0.0.0")
-HARDWARE_HOST = os.getenv("HARDWARE_HOST", "0.0.0.0")
+MOCK_GATEWAY_PORT = int(os.getenv("MOCK_GATEWAY_PORT", "9000"))
+MOCK_HARDWARE_PORT = int(os.getenv("MOCK_HARDWARE_PORT", "8080"))
+MOCK_GATEWAY_HOST = os.getenv("MOCK_GATEWAY_HOST", "0.0.0.0")
+MOCK_HARDWARE_HOST = os.getenv("MOCK_HARDWARE_HOST", "0.0.0.0")
+
+# =============================================================================
+# 스케줄러 설정
+# =============================================================================
+SCHEDULER_AUTO_START = os.getenv("SCHEDULER_AUTO_START", "false").lower() == "true"
+SCHEDULER_INTERVAL_MINUTES = int(os.getenv("SCHEDULER_INTERVAL_MINUTES", "30"))
+SCHEDULER_USER_ID = os.getenv("SCHEDULER_USER_ID", "default_user")
 
 # =============================================================================
 # 로깅 설정

@@ -4,7 +4,7 @@ API 엔드포인트 라우터 설정 (명세서에 맞춤)
 """
 
 from fastapi import APIRouter
-from app.api.endpoints import devices, recommendations
+from app.api.endpoints import devices, recommendations, scheduler
 
 # API 라우터 생성
 api_router = APIRouter()
@@ -20,4 +20,9 @@ api_router.include_router(
     recommendations.router,
     prefix="/recommendations",
     tags=["smart-recommendations"]
+)
+
+api_router.include_router(
+    scheduler.router,
+    tags=["scheduler"]
 )

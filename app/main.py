@@ -32,8 +32,10 @@ async def lifespan(app: FastAPI):
     # 시작 시
     logger.info("GazeHome AI Services 시작 중...")
     logger.info(f"서버 설정: {HOST}:{PORT}")
-    logger.info(f"Gateway 엔드포인트: {GATEWAY_ENDPOINT}")
-    logger.info(f"하드웨어 엔드포인트: {HARDWARE_ENDPOINT}")
+    logger.info(f"Gateway URL: {GATEWAY_URL}")
+    logger.info(f"Hardware URL: {HARDWARE_URL}")
+    logger.info(f"Gateway Control: {GATEWAY_CONTROL_ENDPOINT}")
+    logger.info(f"Hardware Recommendations: {HARDWARE_RECOMMENDATIONS_ENDPOINT}")
     logger.info(f"MongoDB 데이터베이스: {MONGODB_DATABASE}")
     
     # MongoDB 연결
@@ -42,6 +44,18 @@ async def lifespan(app: FastAPI):
         logger.info("MongoDB 연결 완료")
     except Exception as e:
         logger.warning(f"MongoDB 연결 실패: {e}")
+    
+    # 스케줄러 자동 시작 (환경변수로 제어)
+    if SCHEDULER_AUTO_START:
+        try:
+            from app.services.scheduler_service import scheduler_service
+            await scheduler_service.start(
+                user_id=SCHEDULER_USER_ID,
+                interval_minutes=SCHEDULER_INTERVAL_MINUTES
+            )
+            logger.info(f"스케줄러 자동 시작 완료 (간격: {SCHEDULER_INTERVAL_MINUTES}분)")
+        except Exception as e:
+            logger.warning(f"스케줄러 자동 시작 실패: {e}")
     
     yield
     
