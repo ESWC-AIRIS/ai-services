@@ -1,6 +1,6 @@
 {
   "demo_scenarios": {
-    "여름 폭염": {
+    "여름폭염": {
       "weather_data": {
         "location": "Seoul",
         "country": "KR", 
@@ -11,7 +11,7 @@
         "icon": "01d"
       }
     },
-    "겨울 한파": {
+    "겨울한파": {
       "weather_data": {
         "location": "Seoul",
         "country": "KR",
@@ -22,7 +22,7 @@
         "icon": "01d"
       }
     },
-    "봄 황사": {
+    "봄황사": {
       "weather_data": {
         "location": "Seoul",
         "country": "KR",
@@ -33,7 +33,7 @@
         "icon": "50d"
       }
     },
-    "여름 장마": {
+    "여름장마": {
       "weather_data": {
         "location": "Seoul",
         "country": "KR",
@@ -44,7 +44,7 @@
         "icon": "10d"
       }
     },
-    "가을 환절기": {
+    "가을환절기": {
       "weather_data": {
         "location": "Seoul",
         "country": "KR",
@@ -55,7 +55,7 @@
         "icon": "02d"
       }
     },
-    "겨울 건조": {
+    "겨울건조": {
       "weather_data": {
         "location": "Seoul",
         "country": "KR",
@@ -66,7 +66,7 @@
         "icon": "01d"
       }
     },
-    "아침 7시": {
+    "아침7시": {
       "weather_data": {
         "location": "Seoul",
         "country": "KR",
@@ -77,7 +77,7 @@
         "icon": "01d"
       }
     },
-    "점심 12시": {
+    "점심12시": {
       "weather_data": {
         "location": "Seoul",
         "country": "KR",
@@ -88,7 +88,7 @@
         "icon": "01d"
       }
     },
-    "저녁 6시": {
+    "저녁6시": {
       "weather_data": {
         "location": "Seoul",
         "country": "KR",
@@ -99,7 +99,7 @@
         "icon": "02d"
       }
     },
-    "밤 10시": {
+    "밤10시": {
       "weather_data": {
         "location": "Seoul",
         "country": "KR",
