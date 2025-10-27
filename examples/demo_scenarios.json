@@ -1,0 +1,123 @@
+{
+  "demo_scenarios": {
+    "여름 폭염": {
+      "weather_data": {
+        "location": "Seoul",
+        "country": "KR", 
+        "temperature": 35.2,
+        "feels_like": 38.5,
+        "humidity": 65,
+        "description": "clear sky",
+        "icon": "01d"
+      }
+    },
+    "겨울 한파": {
+      "weather_data": {
+        "location": "Seoul",
+        "country": "KR",
+        "temperature": -12.3,
+        "feels_like": -18.7,
+        "humidity": 45,
+        "description": "clear sky",
+        "icon": "01d"
+      }
+    },
+    "봄 황사": {
+      "weather_data": {
+        "location": "Seoul",
+        "country": "KR",
+        "temperature": 18.5,
+        "feels_like": 16.2,
+        "humidity": 78,
+        "description": "haze",
+        "icon": "50d"
+      }
+    },
+    "여름 장마": {
+      "weather_data": {
+        "location": "Seoul",
+        "country": "KR",
+        "temperature": 28.7,
+        "feels_like": 32.1,
+        "humidity": 85,
+        "description": "moderate rain",
+        "icon": "10d"
+      }
+    },
+    "가을 환절기": {
+      "weather_data": {
+        "location": "Seoul",
+        "country": "KR",
+        "temperature": 22.3,
+        "feels_like": 20.8,
+        "humidity": 55,
+        "description": "partly cloudy",
+        "icon": "02d"
+      }
+    },
+    "겨울 건조": {
+      "weather_data": {
+        "location": "Seoul",
+        "country": "KR",
+        "temperature": 5.2,
+        "feels_like": 2.1,
+        "humidity": 28,
+        "description": "clear sky",
+        "icon": "01d"
+      }
+    },
+    "아침 7시": {
+      "weather_data": {
+        "location": "Seoul",
+        "country": "KR",
+        "temperature": 18.5,
+        "feels_like": 17.2,
+        "humidity": 72,
+        "description": "clear sky",
+        "icon": "01d"
+      }
+    },
+    "점심 12시": {
+      "weather_data": {
+        "location": "Seoul",
+        "country": "KR",
+        "temperature": 28.9,
+        "feels_like": 31.2,
+        "humidity": 58,
+        "description": "clear sky",
+        "icon": "01d"
+      }
+    },
+    "저녁 6시": {
+      "weather_data": {
+        "location": "Seoul",
+        "country": "KR",
+        "temperature": 24.1,
+        "feels_like": 25.8,
+        "humidity": 65,
+        "description": "partly cloudy",
+        "icon": "02d"
+      }
+    },
+    "밤 10시": {
+      "weather_data": {
+        "location": "Seoul",
+        "country": "KR",
+        "temperature": 19.8,
+        "feels_like": 18.5,
+        "humidity": 78,
+        "description": "clear sky",
+        "icon": "01n"
+      }
+    }
+  },
+  "default_weather": {
+    "location": "Seoul",
+    "country": "KR",
+    "temperature": 22.0,
+    "feels_like": 20.5,
+    "humidity": 60,
+    "description": "clear sky",
+    "icon": "01d"
+  }
+}
