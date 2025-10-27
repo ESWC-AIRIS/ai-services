@@ -29,27 +29,29 @@ class RecommendationService:
         self, 
         title: str, 
         contents: str, 
-        context: Optional[str] = None,
-        device_control: Optional[DeviceControl] = None
-    ) -> Recommendation:
+        device_control: Optional[DeviceControl] = None,
+        user_id: str = "default_user",
+        mode: str = "production"
+    ) -> str:
         """새 추천 생성"""
         try:
             recommendation_id = generate_recommendation_id()
             
             recommendation = Recommendation(
                 recommendation_id=recommendation_id,
+                user_id=user_id,
                 title=title,
                 contents=contents,
-                context=context,
                 device_control=device_control,
-                status=RecommendationStatus.PENDING
+                mode=mode,
+                status=RecommendationStatus.SENT_TO_HARDWARE
             )
             
             result = await self.collection.insert_one(recommendation.dict(by_alias=True))
             
             if result.inserted_id:
                 logger.info(f"✅ 추천 생성 완료: {recommendation_id}")
-                return recommendation
+                return recommendation_id
             else:
                 raise Exception("추천 생성 실패")
                 

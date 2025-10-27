@@ -40,10 +40,18 @@ async def lifespan(app: FastAPI):
     
     # MongoDB 연결
     try:
-        await device_service.connect()
+        from app.core.database import connect_to_mongo
+        await connect_to_mongo()
         logger.info("MongoDB 연결 완료")
     except Exception as e:
         logger.warning(f"MongoDB 연결 실패: {e}")
+    
+    # Device Service 연결
+    try:
+        await device_service.connect()
+        logger.info("Device Service 연결 완료")
+    except Exception as e:
+        logger.warning(f"Device Service 연결 실패: {e}")
     
     # 추천 Agent 초기화 확인
     try:
@@ -89,6 +97,14 @@ async def lifespan(app: FastAPI):
         logger.warning(f"추천 Agent 정리 실패: {e}")
     
     # MongoDB 연결 해제
+    try:
+        from app.core.database import close_mongo_connection
+        await close_mongo_connection()
+        logger.info("MongoDB 연결 해제 완료")
+    except Exception as e:
+        logger.warning(f"MongoDB 연결 해제 실패: {e}")
+    
+    # Device Service 연결 해제
     await device_service.disconnect()
 
 

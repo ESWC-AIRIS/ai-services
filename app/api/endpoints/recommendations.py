@@ -11,7 +11,7 @@ from app.core.config import *
 from app.models.recommendations import (
     RecommendationCreateRequest, RecommendationCreateResponse,
     RecommendationConfirmRequest, RecommendationConfirmResponse,
-    DeviceControl
+    HardwareRecommendationRequest, DeviceControl
 )
 from app.services.recommendation_service import get_recommendation_service
 
@@ -79,57 +79,82 @@ hardware_client = HardwareClient()
 
 
 @router.post("/", response_model=RecommendationCreateResponse)
-async def create_recommendation(request: RecommendationCreateRequest):
-    """AI → HW 추천 생성 및 전송"""
+async def send_to_hardware(request: HardwareRecommendationRequest):
+    """AI → HW 추천 전달 (명세서)"""
     try:
-        # 추천 서비스 가져오기
-        recommendation_service = await get_recommendation_service()
-        
-        # AI Agent로 추천 생성
-        from app.agents.recommendation_agent import create_agent
-        agent = create_agent()
-        
-        # Agent로 추천 생성
-        agent_recommendation = await agent.generate_recommendation(request.context)
-        
-        # 기기 제어 정보 추출
-        device_control = None
-        if agent_recommendation.get('device_control'):
-            control_info = agent_recommendation['device_control']
-            device_control = DeviceControl(
-                device_type=control_info.get('device_type'),
-                action=control_info.get('action'),
-                device_id=control_info.get('device_id')
-            )
-        
-        # MongoDB에 추천 저장
-        recommendation = await recommendation_service.create_recommendation(
-            title=request.title,
-            contents=request.contents,
-            context=request.context,
-            device_control=device_control
-        )
+        logger.info(f"🤖 하드웨어에 추천 전달:")
+        logger.info(f"  - 추천 ID: {request.recommendation_id}")
+        logger.info(f"  - 제목: {request.title}")
+        logger.info(f"  - 내용: {request.contents}")
         
         # 하드웨어에 추천 전송
         hardware_response = await hardware_client.send_recommendation(
-            recommendation.recommendation_id,
+            request.recommendation_id,
             request.title,
             request.contents
         )
         
-        # 하드웨어 전송 완료 표시
-        await recommendation_service.mark_hardware_sent(recommendation.recommendation_id)
+        logger.info(f"✅ 하드웨어 전송 완료: {hardware_response}")
         
-        logger.info(f"✅ 추천 생성 및 하드웨어 전송 완료: {recommendation.recommendation_id}")
-        
+        # 응답 반환
         return RecommendationCreateResponse(
-            recommendation_id=recommendation.recommendation_id,
+            recommendation_id=request.recommendation_id,
             message="추천이 하드웨어에 전송되었습니다"
         )
         
     except Exception as e:
-        logger.error(f"❌ 추천 생성 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"추천 생성 실패: {str(e)}")
+        logger.error(f"❌ 하드웨어 전송 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"하드웨어 전송 실패: {str(e)}")
+
+
+@router.post("/generate", response_model=RecommendationCreateResponse)
+async def create_demo_recommendation(request: RecommendationCreateRequest):
+    """데모용 추천 생성 및 하드웨어 전송"""
+    try:
+        logger.info(f"🎯 데모 추천 생성 요청:")
+        logger.info(f"  - 사용자 ID: {request.user_id}")
+        logger.info(f"  - 시나리오: {request.scenario}")
+        
+        # 추천 서비스 가져오기
+        recommendation_service = await get_recommendation_service()
+        
+        # 데모용 추천 생성 (시나리오 기반)
+        from app.agents.recommendation_agent import demo_generate_recommendation
+        ai_recommendation = demo_generate_recommendation(request.scenario)
+        
+        if not ai_recommendation or not ai_recommendation.get('device_control'):
+            raise HTTPException(status_code=500, detail="데모 추천 생성에 실패했습니다.")
+        
+        # 기기 제어 정보 추출
+        device_control = DeviceControl(**ai_recommendation['device_control'])
+        
+        # MongoDB에 추천 데이터 저장 (데모 모드)
+        recommendation_id = await recommendation_service.create_recommendation(
+            title=ai_recommendation['title'],
+            contents=ai_recommendation['contents'],
+            device_control=device_control,
+            user_id=request.user_id,
+            mode="demo"
+        )
+        
+        # 하드웨어에 추천 전송
+        hardware_response = await hardware_client.send_recommendation(
+            recommendation_id,
+            ai_recommendation['title'],
+            ai_recommendation['contents']
+        )
+        
+        logger.info(f"✅ 데모 추천 생성 및 하드웨어 전송 완료: {recommendation_id}")
+        
+        # 응답 반환
+        return RecommendationCreateResponse(
+            recommendation_id=recommendation_id,
+            message="데모 추천이 하드웨어에 전송되었습니다"
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ 데모 추천 생성 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"데모 추천 생성 실패: {str(e)}")
 
 
 @router.post("/confirm", response_model=RecommendationConfirmResponse)

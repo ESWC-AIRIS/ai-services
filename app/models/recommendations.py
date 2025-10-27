@@ -31,11 +31,13 @@ class Recommendation(BaseModel):
     """추천 정보"""
     id: PyObjectId = Field(default_factory=lambda: str(ObjectId()), alias="_id")
     recommendation_id: str = Field(..., description="추천 ID (rec_YYYYMMDD_HHMMSS)")
+    user_id: str = Field(..., description="추천을 받은 사용자 ID")
     title: str = Field(..., description="추천 제목")
     contents: str = Field(..., description="추천 내용")
     context: Optional[str] = Field(None, description="추천 컨텍스트")
     device_control: Optional[DeviceControl] = Field(None, description="기기 제어 정보")
     status: RecommendationStatus = Field(default=RecommendationStatus.PENDING, description="추천 상태")
+    mode: str = Field(..., description="데모/운영 구분 (demo/production)")
     user_response: Optional[str] = Field(None, description="사용자 응답 (YES/NO)")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="생성 시간")
     confirmed_at: Optional[datetime] = Field(None, description="확인 시간")
@@ -48,10 +50,16 @@ class Recommendation(BaseModel):
 
 
 class RecommendationCreateRequest(BaseModel):
-    """추천 생성 요청"""
+    """데모용 추천 생성 요청"""
+    user_id: str = Field(..., description="추천을 요청한 사용자 ID")
+    scenario: str = Field(..., description="데모 시나리오명 (예: '여름폭염', '겨울한파')")
+
+
+class HardwareRecommendationRequest(BaseModel):
+    """하드웨어용 추천 전달 요청 (명세서)"""
+    recommendation_id: str = Field(..., description="추천 ID")
     title: str = Field(..., description="추천 제목")
     contents: str = Field(..., description="추천 내용")
-    context: Optional[str] = Field(None, description="추천 컨텍스트")
 
 
 class RecommendationCreateResponse(BaseModel):

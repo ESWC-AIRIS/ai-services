@@ -471,8 +471,8 @@ def create_recommendation_agent():
     return recommendation_agent
 
 # 데모용 간단한 함수들
-def demo_generate_recommendation(context: str = None) -> Dict[str, Any]:
-    """데모용 추천 생성 (실제 날씨 API 구조 기반)"""
+def demo_generate_recommendation(scenario: str = None) -> Dict[str, Any]:
+    """데모용 추천 생성 (시나리오 기반)"""
     try:
         import json
         import os
@@ -486,16 +486,14 @@ def demo_generate_recommendation(context: str = None) -> Dict[str, Any]:
         demo_scenarios = scenarios_data["demo_scenarios"]
         default_weather = scenarios_data["default_weather"]
         
-        # 컨텍스트에 따라 적절한 시나리오 선택
-        if context:
-            for scenario_name, scenario_data in demo_scenarios.items():
-                if scenario_name in context:
-                    weather_data = scenario_data["weather_data"]
-                    print(f"🌤️ 데모 시나리오: {scenario_name}")
-                    print(f"📊 날씨 데이터: {weather_data}")
-                    
-                    # 실제 Agent처럼 날씨 데이터를 기반으로 추천 생성
-                    return _generate_recommendation_from_weather(weather_data, scenario_name)
+        # 시나리오명으로 직접 선택
+        if scenario and scenario in demo_scenarios:
+            weather_data = demo_scenarios[scenario]["weather_data"]
+            print(f"🌤️ 데모 시나리오: {scenario}")
+            print(f"📊 날씨 데이터: {weather_data}")
+            
+            # 실제 Agent처럼 날씨 데이터를 기반으로 추천 생성
+            return _generate_recommendation_from_weather(weather_data, scenario)
         
         # 기본 응답
         print(f"📊 기본 날씨 데이터: {default_weather}")
