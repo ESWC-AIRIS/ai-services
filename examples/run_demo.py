@@ -73,15 +73,15 @@ class IntegratedDemo:
             
             # 날씨 시나리오 테스트
             print("\n🌤️ 날씨 시나리오 테스트")
-            print("=" * 50)
+        print("=" * 50)
             
             weather_scenarios = [
-                ("여름 폭염", "현재 기온이 35도로 폭염주의보가 발령되었습니다."),
-                ("겨울 한파", "기온이 영하 10도로 한파주의보가 발령되었습니다."),
-                ("봄 황사", "미세먼지 농도가 매우 나쁨 수준입니다."),
-                ("여름 장마", "습도가 80% 이상으로 매우 습합니다."),
-                ("가을 환절기", "일교차가 큰 환절기입니다."),
-                ("겨울 건조", "습도가 30% 이하로 매우 건조합니다.")
+                ("여름폭염", "현재 기온이 35도로 폭염주의보가 발령되었습니다."),
+                ("겨울한파", "기온이 영하 10도로 한파주의보가 발령되었습니다."),
+                ("봄황사", "미세먼지 농도가 매우 나쁨 수준입니다."),
+                ("여름장마", "습도가 80% 이상으로 매우 습합니다."),
+                ("가을환절기", "일교차가 큰 환절기입니다."),
+                ("겨울건조", "습도가 30% 이하로 매우 건조합니다.")
             ]
             
             weather_success_count = 0
@@ -91,7 +91,7 @@ class IntegratedDemo:
                 
                 try:
                     # AI Agent로 추천 생성만 (하드웨어 통신 없음)
-                    recommendation = demo_generate_recommendation(context)
+                    recommendation = demo_generate_recommendation(scenario_name)
                     
                     print(f"📝 제목: {recommendation['title']}")
                     print(f"💬 내용: {recommendation['contents']}")
@@ -105,13 +105,13 @@ class IntegratedDemo:
             
             # 시간대별 시나리오 테스트
             print("\n🕐 시간대별 시나리오 테스트")
-            print("=" * 50)
-            
+        print("=" * 50)
+        
             time_scenarios = [
-                ("아침 7시", "아침 7시, 출근 준비 중입니다. 실내 온도 22도."),
-                ("점심 12시", "점심 12시, 실내 온도 28도, 점심 준비로 부엌이 더워졌습니다."),
-                ("저녁 6시", "저녁 6시, 퇴근 후 집 도착, 실내 온도 26도."),
-                ("밤 10시", "밤 10시, 잠자리 준비, 실내 온도 24도.")
+                ("아침7시", "아침 7시, 출근 준비 중입니다. 실내 온도 22도."),
+                ("점심12시", "점심 12시, 실내 온도 28도, 점심 준비로 부엌이 더워졌습니다."),
+                ("저녁6시", "저녁 6시, 퇴근 후 집 도착, 실내 온도 26도."),
+                ("밤10시", "밤 10시, 잠자리 준비, 실내 온도 24도.")
             ]
             
             time_success_count = 0
@@ -121,7 +121,7 @@ class IntegratedDemo:
                 
                 try:
                     # AI Agent로 추천 생성만 (하드웨어 통신 없음)
-                    recommendation = demo_generate_recommendation(context)
+                    recommendation = demo_generate_recommendation(time_name)
                     
                     print(f"📝 제목: {recommendation['title']}")
                     print(f"💬 내용: {recommendation['contents']}")
@@ -229,9 +229,9 @@ class IntegratedDemo:
         print("3. 봄 황사 상황에서 공기청정기 추천")
         
         test_scenarios = [
-            ("여름 폭염", "현재 기온이 35도로 폭염주의보가 발령되었습니다."),
-            ("겨울 한파", "기온이 영하 10도로 한파주의보가 발령되었습니다."),
-            ("봄 황사", "미세먼지 농도가 매우 나쁨 수준입니다.")
+            ("여름폭염", "현재 기온이 35도로 폭염주의보가 발령되었습니다."),
+            ("겨울한파", "기온이 영하 10도로 한파주의보가 발령되었습니다."),
+            ("봄황사", "미세먼지 농도가 매우 나쁨 수준입니다.")
         ]
         
         success_count = 0
@@ -242,7 +242,7 @@ class IntegratedDemo:
             try:
                 # 1. AI Agent로 추천 생성
                 print("🤖 AI Agent 추천 생성 중...")
-                recommendation = demo_generate_recommendation(context)
+                recommendation = demo_generate_recommendation(scenario_name)
                 
                 print(f"📝 추천 제목: {recommendation['title']}")
                 print(f"💬 추천 내용: {recommendation['contents']}")
@@ -289,4 +289,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+        asyncio.run(main())
