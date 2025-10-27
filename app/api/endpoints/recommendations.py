@@ -151,11 +151,10 @@ async def confirm_recommendation(request: RecommendationConfirmRequest):
         # 사용자가 YES로 응답한 경우 기기 제어 실행
         if request.confirm.upper() == "YES" and updated_recommendation.device_control:
             try:
-                # Gateway API로 기기 제어
-                from app.services.gateway_service import get_gateway_service
-                gateway_service = await get_gateway_service()
+                # Gateway API로 기기 제어 (기존 GatewayClient 사용)
+                from app.api.endpoints.devices import gateway_client
                 
-                control_result = await gateway_service.control_device(
+                control_result = await gateway_client.control_device(
                     device_id=updated_recommendation.device_control.device_id,
                     action=updated_recommendation.device_control.action
                 )
