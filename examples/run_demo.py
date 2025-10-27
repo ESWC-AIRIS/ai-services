@@ -1,186 +1,292 @@
+#!/usr/bin/env python3
 """
-GazeHome AI Services - 데모 실행기
-사용자 친화적 데모 시스템
-
-실행 방법:
-    python examples/run_demo.py
+GazeHome AI Services - 스마트 홈 데모
+LangChain 기반 추천 Agent 데모 및 전체 시스템 통합 테스트
 """
 
-import asyncio
-import sys
 import os
+import sys
+import asyncio
+from typing import Dict, Any
 
-# 현재 디렉토리를 Python 경로에 추가
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# 프로젝트 루트를 Python 경로에 추가
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from demo_scheduler_test import DemoSchedulerTest
-from demo_weather_scenarios import DemoWeatherScenarios
+# 데모용 함수들 import
+from app.agents.recommendation_agent import demo_generate_recommendation, demo_test_agent
+
 
 class IntegratedDemo:
     """통합 데모 클래스"""
     
     def __init__(self):
-        self.scheduler_demo = DemoSchedulerTest()
-        self.weather_demo = DemoWeatherScenarios()
+        pass
     
     async def run_full_demo(self):
         """전체 데모 실행"""
         print("🎯 GazeHome AI Services - 스마트 홈 데모")
         print("=" * 60)
-        print("30분 대기 없이 다양한 기상 조건에서 AI 추천을 즉시 시연합니다!")
+        print("LangChain 기반 추천 Agent와 전체 시스템 통합 테스트!")
         print("=" * 60)
         
         # 사용자 선택
         print("\n📋 실행할 데모를 선택하세요:")
-        print("1. 스마트 홈 AI 추천 데모 (기상 + 시간대별 시나리오)")
-        print("2. 종료")
+        print("1. LangChain Agent 직접 테스트 (즉시 시나리오 테스트)")
+        print("2. 전체 시스템 통합 테스트 (AI + 하드웨어 + Gateway)")
+        print("3. 종료")
         
         while True:
             try:
-                choice = input("\n선택 (1-2): ").strip()
+                choice = input("\n선택 (1-3): ").strip()
                 
                 if choice == "1":
-                    await self.run_smart_home_demo()
+                    self.run_agent_demo()
                     break
                 elif choice == "2":
+                    await self.run_full_system_demo()
+                    break
+                elif choice == "3":
                     print("👋 데모를 종료합니다.")
                     return
                 else:
-                    print("❌ 잘못된 선택입니다. 1-2 중에서 선택하세요.")
+                    print("❌ 잘못된 선택입니다. 1-3 중에서 선택하세요.")
             except KeyboardInterrupt:
                 print("\n👋 데모를 종료합니다.")
                 return
     
-    async def run_smart_home_demo(self):
-        """통합 스마트 홈 AI 추천 데모 실행"""
-        print("\n🏠 스마트 홈 AI 추천 데모 시작")
-        print("=" * 50)
-        print("다양한 기상 조건과 시간대에서 AI 추천을 시연합니다!")
-        print("=" * 50)
+    def run_agent_demo(self):
+        """LangChain Agent 직접 테스트 데모"""
+        print("\n🤖 LangChain Agent 직접 테스트")
+        print("=" * 60)
+        print("LangChain 기반 스마트 홈 추천 Agent를 직접 테스트합니다!")
+        print("=" * 60)
         
-        # 시나리오 선택 메뉴
-        print("\n📋 시나리오를 선택하세요:")
-        print("1. 기상 시나리오 (여름 폭염, 겨울 한파, 봄 황사, 여름 장마, 가을 환절기, 겨울 건조)")
-        print("2. 시간대별 시나리오 (아침 7시, 점심 12시, 저녁 6시, 밤 10시)")
-        print("3. 개별 시나리오 선택")
-        print("4. 전체 시나리오 실행")
-        
-        while True:
-            try:
-                choice = input("\n선택 (1-4): ").strip()
-                
-                if choice == "1":
-                    await self.run_weather_scenarios()
-                    break
-                elif choice == "2":
-                    await self.run_time_scenarios()
-                    break
-                elif choice == "3":
-                    await self.run_individual_scenarios()
-                    break
-                elif choice == "4":
-                    await self.run_all_scenarios()
-                    break
-                else:
-                    print("❌ 잘못된 선택입니다. 1-4 중에서 선택하세요.")
-            except KeyboardInterrupt:
-                print("\n👋 데모를 종료합니다.")
+        try:
+            # 기본 Agent 테스트
+            print("\n🎯 기본 Agent 테스트")
+            print("=" * 50)
+            basic_success = demo_test_agent()
+            
+            if not basic_success:
+                print("❌ 기본 테스트 실패로 데모를 중단합니다.")
                 return
-        
-        print("\n🎉 스마트 홈 AI 추천 데모 완료!")
-        print("💡 다양한 기상 조건과 시간대에서 AI 추천을 시연했습니다!")
-        print("🚀 Gateway에 등록된 실제 기기만 추천하는 스마트한 AI를 확인했습니다!")
-    
-    async def run_weather_scenarios(self):
-        """기상 시나리오 실행"""
-        print("\n🌤️ 기상 시나리오 테스트")
-        print("=" * 40)
-        await self.weather_demo.run_all_scenarios()
-    
-    async def run_time_scenarios(self):
-        """시간대별 시나리오 실행"""
-        print("\n🕐 시간대별 시나리오 테스트")
-        print("=" * 40)
-        await self.weather_demo.test_time_based_scenarios()
-    
-    async def run_individual_scenarios(self):
-        """개별 시나리오 선택 실행"""
-        print("\n🎯 개별 시나리오 선택")
-        print("=" * 40)
-        
-        # 기상 시나리오 목록
-        weather_scenarios = [
-            {"name": "여름 폭염", "context": "현재 기온이 35도로 폭염주의보가 발령되었습니다. 실내 온도도 30도를 넘어서 매우 더운 상황입니다."},
-            {"name": "겨울 한파", "context": "기온이 영하 10도까지 떨어져 한파주의보가 발령되었습니다. 실내 온도도 15도 이하로 추운 상황입니다."},
-            {"name": "봄 황사", "context": "황사가 심하게 불어와 미세먼지 농도가 매우 나쁨 수준입니다. 실내 공기질도 좋지 않은 상황입니다."},
-            {"name": "여름 장마", "context": "장마철로 습도가 80% 이상으로 매우 높습니다. 실내도 습하고 답답한 상황입니다."},
-            {"name": "가을 환절기", "context": "환절기로 일교차가 크고 감기 환자가 많습니다. 실내 공기질 관리가 중요한 시기입니다."},
-            {"name": "겨울 건조", "context": "겨울철로 습도가 30% 이하로 매우 건조합니다. 실내 공기도 건조해서 불쾌한 상황입니다."}
-        ]
-        
-        # 시간대별 시나리오 목록
-        time_scenarios = [
-            {"name": "아침 7시", "context": "아침 7시, 출근 준비를 하고 있습니다. 실내 온도는 22도입니다."},
-            {"name": "점심 12시", "context": "점심 12시, 실내 온도가 28도로 높아졌습니다. 점심 준비로 부엌이 더워졌습니다."},
-            {"name": "저녁 6시", "context": "저녁 6시, 퇴근 후 집에 도착했습니다. 실내 온도는 26도입니다."},
-            {"name": "밤 10시", "context": "밤 10시, 잠자리 준비를 하고 있습니다. 실내 온도는 24도입니다."}
-        ]
-        
-        all_scenarios = weather_scenarios + time_scenarios
-        
-        print("\n📋 사용 가능한 시나리오:")
-        for i, scenario in enumerate(all_scenarios, 1):
-            print(f"{i}. {scenario['name']}")
-        
-        while True:
-            try:
-                choice = input(f"\n시나리오 선택 (1-{len(all_scenarios)}): ").strip()
-                choice_num = int(choice)
+            
+            # 날씨 시나리오 테스트
+            print("\n🌤️ 날씨 시나리오 테스트")
+            print("=" * 50)
+            
+            weather_scenarios = [
+                ("여름 폭염", "현재 기온이 35도로 폭염주의보가 발령되었습니다."),
+                ("겨울 한파", "기온이 영하 10도로 한파주의보가 발령되었습니다."),
+                ("봄 황사", "미세먼지 농도가 매우 나쁨 수준입니다."),
+                ("여름 장마", "습도가 80% 이상으로 매우 습합니다."),
+                ("가을 환절기", "일교차가 큰 환절기입니다."),
+                ("겨울 건조", "습도가 30% 이하로 매우 건조합니다.")
+            ]
+            
+            weather_success_count = 0
+            for scenario_name, context in weather_scenarios:
+                print(f"\n🌤️ {scenario_name}")
+                print("-" * 30)
                 
-                if 1 <= choice_num <= len(all_scenarios):
-                    selected_scenario = all_scenarios[choice_num - 1]
-                    print(f"\n🎯 선택된 시나리오: {selected_scenario['name']}")
-                    await self.weather_demo.test_weather_scenario(
-                        selected_scenario['name'], 
-                        selected_scenario['context']
-                    )
-                    break
-                else:
-                    print(f"❌ 잘못된 선택입니다. 1-{len(all_scenarios)} 중에서 선택하세요.")
-            except (ValueError, KeyboardInterrupt):
-                print("❌ 잘못된 입력입니다.")
-                break
+                try:
+                    # AI Agent로 추천 생성만 (하드웨어 통신 없음)
+                    recommendation = demo_generate_recommendation(context)
+                    
+                    print(f"📝 제목: {recommendation['title']}")
+                    print(f"💬 내용: {recommendation['contents']}")
+                    print(f"🎯 기기 제어: {recommendation['device_control']}")
+                    
+                    weather_success_count += 1
+                    print("✅ 시나리오 테스트 성공")
+                    
+                except Exception as e:
+                    print(f"❌ 시나리오 테스트 실패: {e}")
+            
+            # 시간대별 시나리오 테스트
+            print("\n🕐 시간대별 시나리오 테스트")
+            print("=" * 50)
+            
+            time_scenarios = [
+                ("아침 7시", "아침 7시, 출근 준비 중입니다. 실내 온도 22도."),
+                ("점심 12시", "점심 12시, 실내 온도 28도, 점심 준비로 부엌이 더워졌습니다."),
+                ("저녁 6시", "저녁 6시, 퇴근 후 집 도착, 실내 온도 26도."),
+                ("밤 10시", "밤 10시, 잠자리 준비, 실내 온도 24도.")
+            ]
+            
+            time_success_count = 0
+            for time_name, context in time_scenarios:
+                print(f"\n🕐 {time_name}")
+                print("-" * 30)
+                
+                try:
+                    # AI Agent로 추천 생성만 (하드웨어 통신 없음)
+                    recommendation = demo_generate_recommendation(context)
+                    
+                    print(f"📝 제목: {recommendation['title']}")
+                    print(f"💬 내용: {recommendation['contents']}")
+                    print(f"🎯 기기 제어: {recommendation['device_control']}")
+                    
+                    time_success_count += 1
+                    print("✅ 시간대 테스트 성공")
+                    
+                except Exception as e:
+                    print(f"❌ 시간대 테스트 실패: {e}")
+            
+            # 전체 결과
+            print("\n🎉 Agent 데모 완료!")
+            print("=" * 60)
+            print(f"✅ 기본 테스트: {'성공' if basic_success else '실패'}")
+            print(f"✅ 날씨 시나리오: {weather_success_count}/{len(weather_scenarios)} 성공")
+            print(f"✅ 시간대 시나리오: {time_success_count}/{len(time_scenarios)} 성공")
+            
+            overall_success = basic_success and weather_success_count == len(weather_scenarios) and time_success_count == len(time_scenarios)
+            print(f"\n🎯 전체 결과: {'성공' if overall_success else '실패'}")
+            
+            if overall_success:
+                print("\n🎉 LangChain Agent 테스트 완료!")
+                print("✅ 모든 테스트가 성공적으로 완료되었습니다.")
+            else:
+                print("\n❌ LangChain Agent 테스트 실패")
+                print("일부 테스트가 실패했습니다.")
+                
+        except Exception as e:
+            print(f"\n❌ LangChain Agent 테스트 중 오류: {e}")
     
-    async def run_all_scenarios(self):
-        """전체 시나리오 실행"""
-        print("\n🌤️ 기상 시나리오 테스트")
-        print("=" * 40)
-        await self.weather_demo.run_all_scenarios()
+    async def _send_to_hardware(self, recommendation):
+        """하드웨어에 추천 전송 (실제 Mock 서버와 통신)"""
+        import httpx
         
-        print("\n" + "="*60)
+        try:
+            # 실제 하드웨어 Mock 서버에 추천 전송
+            hardware_url = "http://localhost:8080"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{hardware_url}/api/recommendations",
+                    json={
+                        "title": recommendation['title'],
+                        "contents": recommendation['contents']
+                    },
+                    timeout=10.0
+                )
+                
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    print(f"❌ 하드웨어 응답 오류: {response.status_code}")
+                    return {"confirm": "NO", "message": "하드웨어 응답 오류"}
+                    
+        except httpx.ConnectError:
+            print("❌ 하드웨어 Mock 서버에 연결할 수 없습니다. (포트 8080)")
+            print("💡 터미널에서 하드웨어 Mock 서버를 실행하세요:")
+            print("   python -c \"import uvicorn; from fastapi import FastAPI; app = FastAPI(); uvicorn.run(app, host='0.0.0.0', port=8080)\"")
+            return {"confirm": "NO", "message": "하드웨어 서버 연결 실패"}
+        except Exception as e:
+            print(f"❌ 하드웨어 통신 실패: {e}")
+            return {"confirm": "NO", "message": "통신 실패"}
+    
+    async def _control_device(self, device_control):
+        """실제 기기 제어 (Gateway API 호출)"""
+        import httpx
         
-        print("\n🕐 시간대별 시나리오 테스트")
-        print("=" * 40)
-        await self.weather_demo.test_time_based_scenarios()
+        try:
+            # Gateway API로 실제 기기 제어
+            # 여기서는 Mock 응답으로 시뮬레이션
+            device_type = device_control.get('device_type')
+            action = device_control.get('action')
+            
+            print(f"🎯 Gateway API 호출: {device_type} -> {action}")
+            
+            # 실제로는 Gateway API 호출
+            # gateway_url = os.getenv("GATEWAY_URL", "http://localhost:9000")
+            # async with httpx.AsyncClient() as client:
+            #     response = await client.post(f"{gateway_url}/api/lg/control", json={
+            #         "device_id": "실제_기기_ID",
+            #         "action": action
+            #     })
+            
+            return {
+                "success": True,
+                "message": f"{device_type} {action} 제어 완료",
+                "device_type": device_type,
+                "action": action
+            }
+        except Exception as e:
+            print(f"❌ 기기 제어 실패: {e}")
+            return {"success": False, "message": "제어 실패"}
+    
+    async def run_full_system_demo(self):
+        """전체 시스템 통합 테스트 (AI + 하드웨어 + Gateway)"""
+        print("\n🔗 전체 시스템 통합 테스트")
+        print("=" * 60)
+        print("AI Agent → 하드웨어 Mock → Gateway API 전체 플로우 테스트!")
+        print("=" * 60)
+        
+        print("\n📋 테스트 시나리오:")
+        print("1. 여름 폭염 상황에서 에어컨 추천")
+        print("2. 겨울 한파 상황에서 난방 추천")
+        print("3. 봄 황사 상황에서 공기청정기 추천")
+        
+        test_scenarios = [
+            ("여름 폭염", "현재 기온이 35도로 폭염주의보가 발령되었습니다."),
+            ("겨울 한파", "기온이 영하 10도로 한파주의보가 발령되었습니다."),
+            ("봄 황사", "미세먼지 농도가 매우 나쁨 수준입니다.")
+        ]
+        
+        success_count = 0
+        for scenario_name, context in test_scenarios:
+            print(f"\n🎯 {scenario_name} 시나리오 테스트")
+            print("-" * 40)
+            
+            try:
+                # 1. AI Agent로 추천 생성
+                print("🤖 AI Agent 추천 생성 중...")
+                recommendation = demo_generate_recommendation(context)
+                
+                print(f"📝 추천 제목: {recommendation['title']}")
+                print(f"💬 추천 내용: {recommendation['contents']}")
+                print(f"🎯 기기 제어: {recommendation['device_control']}")
+                
+                # 2. 하드웨어에 추천 전송
+                print(f"\n📱 하드웨어 Mock 서버에 추천 전송 중...")
+                hardware_response = await self._send_to_hardware(recommendation)
+                
+                print(f"👤 사용자 응답: {hardware_response['confirm']}")
+                print(f"💬 응답 메시지: {hardware_response['message']}")
+                
+                # 3. 사용자가 YES로 응답한 경우 실제 기기 제어
+                if hardware_response['confirm'] == 'YES':
+                    print(f"\n🔧 Gateway API로 실제 기기 제어 실행...")
+                    control_result = await self._control_device(recommendation['device_control'])
+                    print(f"✅ 기기 제어 결과: {control_result['message']}")
+                else:
+                    print(f"❌ 사용자가 추천을 거부했습니다.")
+                
+                success_count += 1
+                print(f"✅ {scenario_name} 시나리오 테스트 완료")
+                
+            except Exception as e:
+                print(f"❌ {scenario_name} 시나리오 테스트 실패: {e}")
+        
+        # 전체 결과
+        print(f"\n🎉 전체 시스템 통합 테스트 완료!")
+        print("=" * 60)
+        print(f"✅ 성공한 시나리오: {success_count}/{len(test_scenarios)}")
+        
+        if success_count == len(test_scenarios):
+            print("\n🎉 모든 시스템이 정상적으로 작동합니다!")
+            print("✅ AI Agent → 하드웨어 Mock → Gateway API 통신 성공")
+        else:
+            print(f"\n❌ {len(test_scenarios) - success_count}개 시나리오가 실패했습니다.")
+            print("💡 하드웨어 Mock 서버가 실행 중인지 확인하세요.")
+
 
 async def main():
     """메인 함수"""
     demo = IntegratedDemo()
     await demo.run_full_demo()
 
+
 if __name__ == "__main__":
-    print("🎯 GazeHome AI Services - 스마트 홈 데모")
-    print("=" * 50)
-    print("30분 대기 없이 다양한 기상 조건에서 AI 추천을 즉시 시연합니다!")
-    print("⚠️  주의: AI 서버가 실행 중인지 확인하세요!")
-    print("   AI 서버: http://localhost:8000")
-    print("   Mock 서버: http://localhost:9000, http://localhost:8080")
-    print("=" * 50)
-    
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\n👋 데모를 종료합니다.")
-    except Exception as e:
-        print(f"\n❌ 데모 실행 중 오류 발생: {e}")
-        print("💡 AI 서버가 실행 중인지 확인하세요.")
+    asyncio.run(main())

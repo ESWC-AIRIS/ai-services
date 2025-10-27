@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """애플리케이션 생명주기 관리"""
+    """애플리케이션 생명주기 관리 (MCP 도구 포함)"""
     # 시작 시
     logger.info("GazeHome AI Services 시작 중...")
     logger.info(f"서버 설정: {HOST}:{PORT}")
@@ -44,6 +44,23 @@ async def lifespan(app: FastAPI):
         logger.info("MongoDB 연결 완료")
     except Exception as e:
         logger.warning(f"MongoDB 연결 실패: {e}")
+    
+    # 추천 Agent 초기화 확인
+    try:
+        from app.agents.recommendation_agent import create_agent
+        agent = create_agent()
+        if agent and agent.agent_executor:
+            logger.info("추천 Agent 초기화 완료")
+            
+            # Agent에 도구가 제대로 등록되었는지 확인
+            if hasattr(agent.agent_executor, 'tools'):
+                logger.info(f"Agent 도구 개수: {len(agent.agent_executor.tools)}")
+                for i, tool in enumerate(agent.agent_executor.tools):
+                    logger.info(f"  - 도구 {i+1}: {tool.name}")
+        else:
+            logger.info("추천 Agent 초기화 실패")
+    except Exception as e:
+        logger.warning(f"추천 Agent 초기화 확인 실패: {e}")
     
     # 스케줄러 자동 시작 (환경변수로 제어)
     if SCHEDULER_AUTO_START:
@@ -61,11 +78,22 @@ async def lifespan(app: FastAPI):
     
     # 종료 시
     logger.info("GazeHome AI Services 종료 중...")
+    
+    # 추천 Agent 정리
+    try:
+        from app.agents.recommendation_agent import recommendation_agent
+        if recommendation_agent:
+            await recommendation_agent.close()
+            logger.info("추천 Agent 정리 완료")
+    except Exception as e:
+        logger.warning(f"추천 Agent 정리 실패: {e}")
+    
+    # MongoDB 연결 해제
     await device_service.disconnect()
 
 
-# FastAPI 앱 생성
-app = FastAPI(
+# 기본 FastAPI 앱 생성
+base_app = FastAPI(
     title="GazeHome AI Services",
     description="시선으로 제어하는 스마트 홈 AI 서버",
     version="1.0.0",
@@ -73,6 +101,13 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan
 )
+
+# 추천 Agent 통합
+from app.agents.recommendation_agent import create_agent
+recommendation_agent = create_agent()
+
+# 기본 FastAPI 앱 사용
+app = base_app
 
 # CORS 미들웨어 설정
 app.add_middleware(
@@ -113,6 +148,6 @@ if __name__ == "__main__":
         "app.main:app",
         host=HOST,
         port=PORT,
-        reload=True,
+        reload=False,  # MCP 연결 안정성을 위해 reload 비활성화
         log_level="info"
     )

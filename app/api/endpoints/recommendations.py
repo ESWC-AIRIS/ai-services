@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from typing import Dict, Any, List, Optional
 import logging
 import httpx
-import google.generativeai as genai
+# google.generativeai는 LangChain Agent로 대체되어 더 이상 사용하지 않음
 from app.core.config import *
 from app.models.recommendations import (
     RecommendationRequest, RecommendationResponse, 
@@ -72,219 +72,60 @@ class HardwareClient:
             raise HTTPException(status_code=500, detail=f"추천 전송 실패: {str(e)}")
 
 
-# Gemini AI 설정
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-2.0-flash')
-else:
-    model = None
+# 추천 Agent 설정
+from app.agents.recommendation_agent import create_agent
+recommendation_agent = create_agent()
 
 # 하드웨어 클라이언트 인스턴스
 hardware_client = HardwareClient()
 
 class AIRecommendationService:
-    """AI 추천 서비스"""
+    """AI 추천 서비스 (추천 Agent 사용)"""
     
     def __init__(self):
-        self.model = model
+        self.agent = recommendation_agent
     
     async def generate_smart_recommendation(self, context: str = None) -> Dict[str, Any]:
-        """AI가 스마트 추천 생성 (제어 정보 포함)"""
-        if not self.model:
-            # Gemini API가 없으면 기본 추천 반환
-            return {
-                "title": "스마트 홈 추천",
-                "contents": "현재 상황에 맞는 스마트 홈 기기 제어를 추천드립니다.",
-                "device_control": None
-            }
-        
+        """추천 Agent가 스마트 추천 생성 (제어 정보 포함)"""
         try:
-            # 현재 시간 정보 추가
-            from datetime import datetime
-            import pytz
-            KST = pytz.timezone('Asia/Seoul')
-            now = datetime.now(KST)
-            time_info = {
-                "hour": now.hour,
-                "day_of_week": now.strftime("%A"),
-                "season": self._get_season(now.month)
-            }
+            # 추천 Agent로 추천 생성
+            recommendation = await self.agent.generate_recommendation(context)
             
-            # Gateway에서 등록된 기기 목록 및 상태 조회
-            from app.api.endpoints.devices import gateway_client
-            try:
-                gateway_devices = await gateway_client.get_available_devices()
-                available_devices = gateway_devices.get('response', [])
-                
-                # 각 기기의 상태도 함께 조회
-                device_status_list = []
-                for device in available_devices:
-                    device_id = device['deviceId']
-                    device_alias = device['deviceInfo']['alias']
-                    device_type = device['deviceInfo']['deviceType']
-                    
-                    # 기기 상태 확인
-                    device_status = await self._check_device_status(device_id)
-                    status_text = "실행중" if device_status['is_running'] else "정지중"
-                    control_text = "제어가능" if device_status['can_control'] else "제어불가"
-                    
-                    device_status_list.append(
-                        f"- {device_alias} ({device_type}) - 상태: {status_text}, {control_text}"
-                    )
-                
-                device_info_text = "\n".join(device_status_list) if device_status_list else "등록된 기기가 없습니다."
-            except Exception as e:
-                logger.warning(f"Gateway 기기 목록 조회 실패: {e}")
-                device_info_text = "기기 정보를 확인할 수 없습니다."
-            
-            prompt = f"""
-            당신은 스마트 홈 AI 어시스턴트입니다. 
-            사용자의 현재 상황을 분석하여 적절한 기기 제어 추천을 해주세요.
-            
-            === 현재 상황 ===
-            - 시간: {time_info['hour']}시 ({time_info['day_of_week']})
-            - 계절: {time_info['season']}
-            - 사용자 요청: {context or "일반적인 스마트 홈 환경"}
-            
-            === 등록된 기기 목록 ===
-            {device_info_text}
-            
-            === 추천 가이드라인 ===
-            1. 위에 나열된 등록된 기기 중에서만 추천하세요
-            2. 기기 상태를 고려하여 추천하세요:
-               - 이미 실행중인 기기는 끄기 추천
-               - 정지중인 기기는 켜기 추천
-               - 제어불가능한 기기는 추천하지 마세요
-            3. 시간대별 적절한 추천 (아침: 조명, 저녁: 에어컨/공기청정기)
-            4. 계절별 추천 (여름: 에어컨, 겨울: 난방, 봄/가을: 공기청정기)
-            5. 사용자 요청에 맞는 구체적인 추천
-            6. 친근하고 자연스러운 한국어 표현
-            7. YES/NO로만 답변 가능하므로 "켜기/끄기" 같은 단순한 제어만 추천
-            8. 온도 설정, 강도 조절, 모드 변경 등 복잡한 옵션 절대 제시 금지
-            9. "에어컨 켤까요?", "조명 끌까요?" 같은 단순한 질문만 생성
-            
-            다음 JSON 형식으로 응답해주세요:
-            {{
-                "title": "에어컨 켤까요?",
-                "contents": "현재 온도가 25도이므로 에어컨을 키시는 것을 추천드립니다.",
-                "device_control": {{
-                    "device_type": "air_conditioner",
-                    "action": "turn_on"
-                }}
-            }}
-            
-            device_type 옵션: air_conditioner, air_purifier, dryer
-            action 옵션: 
-            - 에어컨: aircon_on, aircon_off, temp_24, temp_25, temp_26 등
-            - 공기청정기: turn_on, turn_off, clean, auto
-            - 건조기: dryer_on, dryer_off, dryer_start, dryer_stop
-            
-            중요: 
-            - 등록된 기기 목록에 있는 기기만 추천하세요
-            - title은 5-10자 이내의 간단한 질문 형태
-            - device_control은 반드시 포함
-            - JSON 형식으로만 응답
-            """
-            
-            response = self.model.generate_content(prompt)
-            result = response.text.strip()
-            
-            # JSON 응답 파싱
-            try:
-                import json
-                # JSON 부분만 추출 (```json ... ``` 형태일 수 있음)
-                if '```json' in result:
-                    json_start = result.find('```json') + 7
-                    json_end = result.find('```', json_start)
-                    json_str = result[json_start:json_end].strip()
-                elif '{' in result and '}' in result:
-                    json_start = result.find('{')
-                    json_end = result.rfind('}') + 1
-                    json_str = result[json_start:json_end]
-                else:
-                    raise ValueError("JSON 형식을 찾을 수 없습니다")
-                
-                ai_response = json.loads(json_str)
-                
-                # AI가 생성한 구조화된 정보 사용
-                title = ai_response.get('title', '스마트 홈 추천')
-                contents = ai_response.get('contents', '현재 상황에 맞는 스마트 홈 기기 제어를 추천드립니다.')
-                device_control_info = ai_response.get('device_control', {})
-                
-                # 제어 정보가 있으면 Gateway에서 기기 찾기
-                device_control = None
-                if device_control_info:
-                    device_control = await self._prepare_device_control_from_ai(device_control_info)
-                
-                return {
-                    "title": title,
-                    "contents": contents,
-                    "device_control": device_control
-                }
-                
-            except (json.JSONDecodeError, ValueError, KeyError) as e:
-                logger.error(f"AI JSON 응답 파싱 실패: {e}")
-                # 파싱 실패 시 기본 추천 반환
+            # recommendation이 None이거나 유효하지 않은 경우 처리
+            if not recommendation or not isinstance(recommendation, dict):
+                logger.warning("추천 Agent가 유효하지 않은 응답을 반환했습니다.")
                 return {
                     "title": "스마트 홈 추천",
                     "contents": "현재 상황에 맞는 스마트 홈 기기 제어를 추천드립니다.",
                     "device_control": None
                 }
             
+            # Agent가 이미 Gateway API를 호출했으므로 중복 호출 제거
+            # 제어 정보가 있으면 Gateway에서 기기 찾기
+            device_control = None
+            if recommendation.get('device_control'):
+                device_control_info = recommendation['device_control']
+                device_control = await self._prepare_device_control_from_ai(device_control_info)
+            
+            return {
+                "title": recommendation.get('title', '스마트 홈 추천'),
+                "contents": recommendation.get('contents', '현재 상황에 맞는 스마트 홈 기기 제어를 추천드립니다.'),
+                "device_control": device_control
+            }
+            
         except Exception as e:
-            logger.error(f"AI 추천 생성 실패: {e}")
+            logger.error(f"추천 Agent 추천 생성 실패: {e}")
             return {
                 "title": "스마트 홈 추천",
-                "contents": "현재 상황에 맞는 스마트 홈 기기 제어를 추천드립니다."
+                "contents": "현재 상황에 맞는 스마트 홈 기기 제어를 추천드립니다.",
+                "device_control": None
             }
     
-    def _get_season(self, month: int) -> str:
-        """월에 따른 계절 반환"""
-        if month in [12, 1, 2]:
-            return "겨울"
-        elif month in [3, 4, 5]:
-            return "봄"
-        elif month in [6, 7, 8]:
-            return "여름"
-        else:
-            return "가을"
+    # _get_season 메서드는 추천 Agent로 대체되어 제거됨
+    # 추천 Agent가 MCP Weather를 통해 실시간 날씨 정보를 받아오므로 하드코딩된 계절 정보 불필요
     
-    async def _generate_title_from_content(self, contents: str) -> str:
-        """AI가 내용을 보고 제목만 생성"""
-        if not self.model:
-            return "기기 제어할까요?"
-        
-        try:
-            prompt = f"""
-            다음 내용을 보고 간단한 제목(5-10자 이내)을 만들어주세요.
-            
-            내용: {contents}
-            
-            요구사항:
-            - 5-10자 이내의 간단한 질문 형태
-            - "~할까요?" 또는 "~할까요?" 형태
-            - 복잡한 설명 없이 기기 제어만 언급
-            - YES/NO로 답변 가능한 단순한 제어만
-            
-            예시:
-            - "에어컨 켤까요?
-            - "공기청정기 끌까요?"
-            
-            제목만 답변해주세요:
-            """
-            
-            response = self.model.generate_content(prompt)
-            title = response.text.strip()
-            
-            # 제목이 너무 길면 기본값 반환
-            if len(title) > 15:
-                return "기기 제어할까요?"
-            
-            return title
-            
-        except Exception as e:
-            logger.error(f"제목 생성 실패: {e}")
-            return "기기 제어할까요?"
+    # _generate_title_from_content 메서드는 추천 Agent로 대체되어 제거됨
+    # 추천 Agent에서 title과 contents를 함께 생성하므로 별도 제목 생성이 불필요
     
     async def _check_device_status(self, device_id: str) -> Dict[str, Any]:
         """기기 상태 확인"""
@@ -351,108 +192,31 @@ class AIRecommendationService:
                 logger.warning("AI가 생성한 제어 정보가 불완전합니다.")
                 return None
             
-            # Gateway에서 사용 가능한 기기 목록 조회
-            from app.api.endpoints.devices import gateway_client
-            
+            # Agent가 이미 Gateway API를 호출하고 적절한 기기를 선택했으므로
+            # 단순히 Agent 결과를 그대로 사용 (추가 Gateway API 호출 없음)
             try:
-                gateway_devices = await gateway_client.get_available_devices()
-                available_devices = gateway_devices.get('response', [])
+                # Agent가 이미 기기 정보를 처리했으므로 기본 제어 정보만 반환
+                logger.info(f"✅ Agent가 선택한 기기 제어: {device_type} -> {action}")
                 
-                # 적절한 기기 찾기
-                target_device = find_matching_device(available_devices, device_type)
-                
-                if target_device:
-                    device_id = target_device['deviceId']
-                    device_alias = target_device['deviceInfo']['alias']
-                    
-                    # 기기 상태 확인
-                    device_status = await self._check_device_status(device_id)
-                    
-                    # 상태 기반 스마트 액션 결정 (Gateway에서 실제 상태를 제공하지 않으므로 원래 액션 사용)
-                    smart_action = action  # 상태 확인 없이 원래 액션 사용
-                    
-                    logger.info(f"✅ AI 제어 정보로 기기 찾기 완료: {device_alias} -> {smart_action}")
-                    logger.info(f"🎯 기기 상태: {device_status['current_state']} (실행중: {device_status['is_running']})")
-                    
-                    return {
-                        "device_id": device_id,
-                        "device_type": device_type,
-                        "action": smart_action,
-                        "device_alias": device_alias,
-                        "device_status": device_status
-                    }
-                else:
-                    logger.warning(f"⚠️ AI가 요청한 기기 타입을 찾을 수 없습니다: {device_type}")
-                    return None
+                return {
+                    "device_type": device_type,
+                    "action": action,
+                    "source": "agent_recommendation"
+                }
                     
             except Exception as e:
-                logger.error(f"❌ AI 제어 정보로 기기 찾기 실패: {e}")
+                logger.error(f"기기 제어 정보 준비 실패: {e}")
                 return None
                 
         except Exception as e:
             logger.error(f"❌ AI 제어 정보 처리 중 오류 발생: {e}")
             return None
     
-    def _determine_smart_action(self, original_action: str, device_status: Dict[str, Any]) -> str:
-        """기기 상태에 따른 스마트 액션 결정"""
-        current_state = device_status.get('current_state', 'UNKNOWN')
-        is_running = device_status.get('is_running', False)
-        
-        # 이미 실행 중인 기기를 켜려고 하면 끄기로 변경
-        if original_action == "turn_on" and is_running:
-            logger.info(f"🔄 스마트 액션: 이미 실행 중이므로 끄기로 변경")
-            return "turn_off"
-        
-        # 이미 꺼진 기기를 끄려고 하면 켜기로 변경
-        if original_action == "turn_off" and not is_running:
-            logger.info(f"🔄 스마트 액션: 이미 꺼져있으므로 켜기로 변경")
-            return "turn_on"
-        
-        # 상태를 모르거나 제어 불가능한 경우 원래 액션 유지
-        if not device_status.get('can_control', True):
-            logger.warning(f"⚠️ 기기 제어 불가능: {device_status['device_id']}")
-        
-        return original_action
+    # _determine_smart_action 메서드는 추천 Agent로 대체되어 제거됨
+    # 추천 Agent가 기기 상태를 고려한 스마트 액션을 직접 결정하므로 불필요
     
-    async def _prepare_device_control(self, title: str, contents: str) -> Optional[Dict[str, Any]]:
-        """추천 생성 시점에 제어 정보 미리 준비"""
-        try:
-            # 추천 내용에서 기기 제어 정보 추출
-            device_info = extract_device_control_info(title, contents)
-            
-            if not device_info:
-                logger.info("추천 내용에서 기기 제어 정보를 추출할 수 없습니다.")
-                return None
-            
-            # Gateway에서 사용 가능한 기기 목록 조회
-            from app.api.endpoints.devices import gateway_client
-            
-            try:
-                gateway_devices = await gateway_client.get_available_devices()
-                available_devices = gateway_devices.get('response', [])
-                
-                # 적절한 기기 찾기
-                target_device = find_matching_device(available_devices, device_info['device_type'])
-                
-                if target_device:
-                    logger.info(f"✅ 제어 정보 준비 완료: {target_device['deviceInfo']['alias']} -> {device_info['action']}")
-                    return {
-                        "device_id": target_device['deviceId'],
-                        "device_type": device_info['device_type'],
-                        "action": device_info['action'],  # AI가 생성한 액션 그대로 사용
-                        "device_alias": target_device['deviceInfo']['alias']
-                    }
-                else:
-                    logger.warning(f"⚠️ 해당 기기 타입을 찾을 수 없습니다: {device_info['device_type']}")
-                    return None
-                    
-            except Exception as e:
-                logger.error(f"❌ 제어 정보 준비 실패: {e}")
-                return None
-                
-        except Exception as e:
-            logger.error(f"❌ 제어 정보 준비 중 오류 발생: {e}")
-            return None
+    # _prepare_device_control 메서드는 추천 Agent로 대체되어 제거됨
+    # 추천 Agent에서 device_control 정보를 직접 생성하므로 이 메서드는 더 이상 필요하지 않음
 
 # AI 추천 서비스 인스턴스
 ai_service = AIRecommendationService()
