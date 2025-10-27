@@ -74,14 +74,14 @@ class SchedulerService:
             }
             
             if should_recommend:
-                # 실제 AI 추천 서비스 사용
-                from app.api.endpoints.recommendations import AIRecommendationService
+                # AI Agent로 추천 생성
+                from app.agents.recommendation_agent import create_agent
                 
-                ai_service = AIRecommendationService()
+                agent = create_agent()
                 context = f"자동 스케줄러 추천 (시간: {now.hour}시, 계절: {self._get_season(now.month)})"
                 
                 # AI 추천 생성
-                recommendation = await ai_service.generate_smart_recommendation(context)
+                recommendation = await agent.generate_recommendation(context)
                 
                 result.update({
                     "title": recommendation.get("title", "스마트 홈 추천"),
