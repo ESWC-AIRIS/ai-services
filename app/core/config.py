@@ -38,6 +38,13 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = "gemini-2.0-flash"
 
 # =============================================================================
+# Weather MCP 설정
+# =============================================================================
+WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
+DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
+DEMO_WEATHER_SCENARIO = os.getenv("DEMO_WEATHER_SCENARIO", "summer_heat")
+
+# =============================================================================
 # 외부 API 엔드포인트
 # =============================================================================
 # Gateway 서버 기본 URL
@@ -70,3 +77,4 @@ SCHEDULER_USER_ID = os.getenv("SCHEDULER_USER_ID", "default_user")
 # 로깅 설정
 # =============================================================================
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
