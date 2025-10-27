@@ -1,35 +1,91 @@
 """
 GazeHome AI Services - Recommendation Models
-AI 추천 시스템 관련 데이터 모델
+MongoDB 추천 관리 모델
 """
 
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional
+from typing import List, Optional, Dict, Any
+from datetime import datetime
+from bson import ObjectId
+from enum import Enum
+
+from app.models.user import PyObjectId
 
 
-class RecommendationRequest(BaseModel):
-    """AI → HW 추천 요청 (명세서)"""
-    title: str = Field(..., description="추천 제목 (예: 에어컨 킬까요?)")
-    contents: str = Field(..., description="추천 내용")
+class RecommendationStatus(str, Enum):
+    """추천 상태"""
+    PENDING = "pending"           # 대기중 (하드웨어에 전송됨)
+    CONFIRMED = "confirmed"       # 승인됨 (사용자가 YES)
+    REJECTED = "rejected"        # 거부됨 (사용자가 NO)
+    EXPIRED = "expired"          # 만료됨 (시간 초과)
 
 
-class DeviceControlInfo(BaseModel):
+class DeviceControl(BaseModel):
     """기기 제어 정보"""
-    device_id: str = Field(..., description="기기 ID")
-    device_type: str = Field(..., description="기기 타입")
+    device_type: str = Field(..., description="기기 타입 (air_purifier, dryer, air_conditioner)")
     action: str = Field(..., description="제어 액션")
-    device_alias: str = Field(..., description="기기 별명")
+    device_id: Optional[str] = Field(None, description="기기 ID")
+
+
+class Recommendation(BaseModel):
+    """추천 정보"""
+    id: PyObjectId = Field(default_factory=lambda: str(ObjectId()), alias="_id")
+    recommendation_id: str = Field(..., description="추천 ID (rec_YYYYMMDD_HHMMSS)")
+    title: str = Field(..., description="추천 제목")
+    contents: str = Field(..., description="추천 내용")
+    context: Optional[str] = Field(None, description="추천 컨텍스트")
+    device_control: Optional[DeviceControl] = Field(None, description="기기 제어 정보")
+    status: RecommendationStatus = Field(default=RecommendationStatus.PENDING, description="추천 상태")
+    user_response: Optional[str] = Field(None, description="사용자 응답 (YES/NO)")
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="생성 시간")
+    confirmed_at: Optional[datetime] = Field(None, description="확인 시간")
+    hardware_sent_at: Optional[datetime] = Field(None, description="하드웨어 전송 시간")
+    
+    class Config:
+        validate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+
+
+class RecommendationCreateRequest(BaseModel):
+    """추천 생성 요청"""
+    title: str = Field(..., description="추천 제목")
+    contents: str = Field(..., description="추천 내용")
+    context: Optional[str] = Field(None, description="추천 컨텍스트")
+
+
+class RecommendationCreateResponse(BaseModel):
+    """추천 생성 응답"""
+    recommendation_id: str = Field(..., description="추천 ID")
+    message: str = Field(..., description="응답 메시지")
+
+
+class RecommendationConfirmRequest(BaseModel):
+    """추천 확인 요청"""
+    recommendation_id: str = Field(..., description="추천 ID")
+    confirm: str = Field(..., description="사용자 응답 (YES/NO)")
+
+
+class RecommendationConfirmResponse(BaseModel):
+    """추천 확인 응답"""
+    recommendation_id: str = Field(..., description="추천 ID")
+    message: str = Field(..., description="응답 메시지")
 
 
 class RecommendationResponse(BaseModel):
-    """AI → HW 추천 응답 (명세서)"""
-    message: str
-    confirm: str = Field(..., description="사용자 확인 (YES/NO)")
-    device_control: Optional[DeviceControlInfo] = Field(None, description="기기 제어 정보")
-
-
-class EnhancedRecommendation(BaseModel):
-    """향상된 추천 정보 (제어 정보 포함)"""
+    """추천 조회 응답"""
+    recommendation_id: str = Field(..., description="추천 ID")
     title: str = Field(..., description="추천 제목")
     contents: str = Field(..., description="추천 내용")
-    device_control: Optional[DeviceControlInfo] = Field(None, description="기기 제어 정보")
+    context: Optional[str] = Field(None, description="추천 컨텍스트")
+    device_control: Optional[DeviceControl] = Field(None, description="기기 제어 정보")
+    status: RecommendationStatus = Field(..., description="추천 상태")
+    user_response: Optional[str] = Field(None, description="사용자 응답")
+    created_at: datetime = Field(..., description="생성 시간")
+    confirmed_at: Optional[datetime] = Field(None, description="확인 시간")
+
+
+def generate_recommendation_id() -> str:
+    """추천 ID 생성 (rec_YYYYMMDD_HHMMSS)"""
+    now = datetime.utcnow()
+    return f"rec_{now.strftime('%Y%m%d_%H%M%S')}"
