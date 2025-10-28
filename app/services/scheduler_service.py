@@ -113,7 +113,7 @@ class SchedulerService:
                                 action=action_data.get("action"),
                                 order=action_data.get("order", 1),
                                 description=action_data.get("description"),
-                                delay_seconds=action_data.get("delay_seconds", 0)
+                                delay_seconds=action_data.get("delay_seconds", 10)
                             )
                             actions.append(action)
                         

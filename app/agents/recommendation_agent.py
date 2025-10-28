@@ -332,13 +332,14 @@ class RecommendationAgent:
                 }}
             }}
             
-            ⚠️ 액션 시퀀스 생성 규칙:
-            - 반드시 get_device_state로 기기 상태를 먼저 확인하세요
-            - 기기가 꺼져있으면(is_running=false) 먼저 켜기 액션을 추가하세요
-            - 요청된 기능에 필요한 모든 액션을 순서대로 배열에 추가하세요
-            - 타이머나 알림이 필요하면 마지막에 추가하세요
-            - order는 1부터 순차적으로 설정하세요
-            - 각 액션의 목적을 description에 명확히 설명하세요
+             ⚠️ 액션 시퀀스 생성 규칙:
+             - 반드시 get_device_state로 기기 상태를 먼저 확인하세요
+             - 기기가 꺼져있으면(is_running=false) 먼저 켜기 액션을 추가하세요
+             - 요청된 기능에 필요한 모든 액션을 순서대로 배열에 추가하세요
+             - 타이머나 알림이 필요하면 마지막에 추가하세요
+             - order는 1부터 순차적으로 설정하세요
+             - 각 액션의 목적을 description에 명확히 설명하세요
+             - delay_seconds는 기본 10초로 설정 (기기 제어 간 충분한 간격 필요)
             
             기기별 제어 액션 (실제 하드웨어 명세서 기반):
             
@@ -714,7 +715,7 @@ async def _save_recommendation_to_mongodb(recommendation: Dict[str, Any], mode: 
                     action=action_data.get("action"),
                     order=action_data.get("order", 1),
                     description=action_data.get("description"),
-                    delay_seconds=action_data.get("delay_seconds", 0)
+                    delay_seconds=action_data.get("delay_seconds", 10)
                 )
                 actions.append(action)
             

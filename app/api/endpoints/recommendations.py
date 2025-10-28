@@ -274,10 +274,11 @@ async def feedback_recommendation(request: RecommendationConfirmRequest):
                         
                         logger.info(f"✅ 액션 {i+1} 완료: {control_result}")
                         
-                        # 지연 시간이 있으면 대기
-                        if action.delay_seconds > 0:
-                            logger.info(f"⏳ {action.delay_seconds}초 대기 중...")
-                            await asyncio.sleep(action.delay_seconds)
+                        # 지연 시간 적용 (기본 10초, 마지막 액션 제외)
+                        if i < len(sorted_actions) - 1:  # 마지막 액션이 아닌 경우
+                            delay_time = action.delay_seconds if action.delay_seconds > 0 else 10
+                            logger.info(f"⏳ {delay_time}초 대기 중... (기기 제어 간 충분한 간격)")
+                            await asyncio.sleep(delay_time)
                     
                     logger.info(f"🎉 모든 액션 시퀀스 실행 완료!")
                     

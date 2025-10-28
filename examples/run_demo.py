@@ -154,12 +154,15 @@ class IntegratedDemo:
             print(f"\n❌ LangChain Agent 테스트 중 오류: {e}")
     
     async def _send_to_hardware(self, recommendation):
-        """하드웨어에 추천 전송 (실제 Mock 서버와 통신)"""
+        """하드웨어에 추천 전송 (실제 하드웨어 서버와 통신)"""
         import httpx
         
         try:
-            # 실제 하드웨어 Mock 서버에 추천 전송
-            hardware_url = "http://localhost:8080"
+            # 실제 하드웨어 서버에 추천 전송
+            from app.core.config import HARDWARE_URL
+            hardware_url = HARDWARE_URL
+            
+            print(f"📱 하드웨어 서버에 추천 전송 중... ({hardware_url})")
             
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -178,9 +181,8 @@ class IntegratedDemo:
                     return {"confirm": "NO", "message": "하드웨어 응답 오류"}
                     
         except httpx.ConnectError:
-            print("❌ 하드웨어 Mock 서버에 연결할 수 없습니다. (포트 8080)")
-            print("💡 터미널에서 하드웨어 Mock 서버를 실행하세요:")
-            print("   python -c \"import uvicorn; from fastapi import FastAPI; app = FastAPI(); uvicorn.run(app, host='0.0.0.0', port=8080)\"")
+            print(f"❌ 하드웨어 서버에 연결할 수 없습니다. ({hardware_url})")
+            print("💡 하드웨어 서버가 실행 중인지 확인하세요.")
             return {"confirm": "NO", "message": "하드웨어 서버 연결 실패"}
         except Exception as e:
             print(f"❌ 하드웨어 통신 실패: {e}")
@@ -237,10 +239,11 @@ class IntegratedDemo:
                         else:
                             print(f"❌ 액션 {i+1} 실패: {response.status_code}")
                     
-                    # 지연 시간이 있으면 대기
-                    if delay_seconds > 0:
-                        print(f"⏳ {delay_seconds}초 대기 중...")
-                        await asyncio.sleep(delay_seconds)
+                    # 지연 시간 적용 (기본 10초, 마지막 액션 제외)
+                    if i < len(sorted_actions) - 1:  # 마지막 액션이 아닌 경우
+                        delay_time = delay_seconds if delay_seconds > 0 else 10
+                        print(f"⏳ {delay_time}초 대기 중... (기기 제어 간 충분한 간격)")
+                        await asyncio.sleep(delay_time)
                 
                 print(f"🎉 액션 시퀀스 실행 완료! ({success_count}/{len(sorted_actions)} 성공)")
                 
@@ -308,7 +311,7 @@ class IntegratedDemo:
         """전체 시스템 통합 테스트 (AI + 하드웨어 + Gateway)"""
         print("\n🔗 전체 시스템 통합 테스트")
         print("=" * 60)
-        print("AI Agent → 하드웨어 Mock → Gateway API 전체 플로우 테스트!")
+        print("AI Agent → 실제 하드웨어 서버 → Gateway API 전체 플로우 테스트!")
         print("=" * 60)
         
         print("\n📋 테스트 시나리오:")
@@ -364,10 +367,10 @@ class IntegratedDemo:
         
         if success_count == len(test_scenarios):
             print("\n🎉 모든 시스템이 정상적으로 작동합니다!")
-            print("✅ AI Agent → 하드웨어 Mock → Gateway API 통신 성공")
+            print("✅ AI Agent → 실제 하드웨어 서버 → Gateway API 통신 성공")
         else:
             print(f"\n❌ {len(test_scenarios) - success_count}개 시나리오가 실패했습니다.")
-            print("💡 하드웨어 Mock 서버가 실행 중인지 확인하세요.")
+            print("💡 하드웨어 서버가 실행 중인지 확인하세요.")
 
 
 async def main():
