@@ -189,6 +189,35 @@ class IntegratedDemo:
             print(f"❌ 하드웨어 통신 실패: {e}")
             return {"confirm": "NO", "message": "통신 실패"}
     
+    async def _show_progress_bar(self, total_seconds: int):
+        """프로그래스바 표시"""
+        import sys
+        import time
+        
+        print(f"\n{'='*50}")
+        print(f"⏳ 다음 시나리오까지... ({total_seconds}초)")
+        print(f"{'='*50}")
+        
+        for i in range(total_seconds):
+            # 프로그래스바 계산
+            progress = (i + 1) / total_seconds
+            bar_length = 40
+            filled_length = int(bar_length * progress)
+            bar = '█' * filled_length + '░' * (bar_length - filled_length)
+            
+            # 남은 시간 계산
+            remaining = total_seconds - i - 1
+            
+            # 프로그래스바 출력 (같은 줄에 덮어쓰기)
+            print(f"\r⏳ [{bar}] {progress*100:.1f}% ({remaining}초 남음)", end='', flush=True)
+            
+            # 1초 대기
+            await asyncio.sleep(1)
+        
+        # 완료 메시지
+        print(f"\n✅ 대기 완료!")
+        print(f"{'='*50}")
+    
     async def _control_device(self, device_control):
         """실제 기기 제어 (Gateway API 호출) - Actions 배열 지원"""
         import httpx
@@ -359,22 +388,8 @@ class IntegratedDemo:
                 print(f"🎯 데모에서는 피드백 수신을 시뮬레이션합니다.")
                 
                 # 피드백 대기 시뮬레이션 (실제로는 하드웨어에서 /api/recommendations/feedback으로 전송됨)
-                await asyncio.sleep(60)  # 실제 대기 시간 시뮬레이션 (60초)
-                
-                # 하드웨어에서 피드백이 왔다고 가정하고 처리
-                user_feedback = "YES"  # 데모에서는 항상 YES로 설정
-                print(f"📨 하드웨어에서 피드백 수신: {user_feedback}")
-                
-                # 피드백 처리 (실제로는 /api/recommendations/feedback 엔드포인트에서 자동 처리됨)
-                print(f"🔄 피드백 처리 중...")
-                
-                # 사용자가 YES로 응답한 경우 실제 기기 제어 실행
-                if user_feedback == 'YES':
-                    print(f"\n🔧 Gateway API로 실제 기기 제어 실행...")
-                    control_result = await self._control_device(recommendation['device_control'])
-                    print(f"✅ 기기 제어 결과: {control_result['message']}")
-                else:
-                    print(f"❌ 사용자가 추천을 거부했습니다.")
+                print(f"\n⏳ 하드웨어에서 사용자 피드백 대기 중... (60초)")
+                await self._show_progress_bar(60)
                 
                 success_count += 1
                 print(f"✅ {scenario_name} 시나리오 테스트 완료")
