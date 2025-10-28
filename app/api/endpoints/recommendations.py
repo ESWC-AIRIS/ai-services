@@ -180,7 +180,11 @@ async def confirm_recommendation(request: RecommendationConfirmRequest):
     """HW → AI 사용자 응답 처리"""
     try:
         # 추천 서비스 가져오기
-        recommendation_service = await get_recommendation_service()
+        from app.core.database import get_database
+        from app.services.recommendation_service import RecommendationService
+        
+        db = await get_database()
+        recommendation_service = RecommendationService(db)
         
         # 추천 확인 처리
         updated_recommendation = await recommendation_service.confirm_recommendation(
