@@ -8,8 +8,9 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
 import pytz
+from app.utils.logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 class SchedulerService:
     """스마트 홈 추천 스케줄러 서비스"""

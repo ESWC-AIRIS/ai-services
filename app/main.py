@@ -18,12 +18,8 @@ from app.services.device_service import device_service
 KST = pytz.timezone('Asia/Seoul')
 
 # 로깅 설정
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [KST] %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger(__name__)
+from app.utils.logger import setup_logger
+logger = setup_logger("gazehome")
 
 
 @asynccontextmanager

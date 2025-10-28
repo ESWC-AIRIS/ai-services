@@ -15,9 +15,10 @@ from app.models.recommendations import (
     HardwareRecommendationRequest, DeviceControl
 )
 from app.services.recommendation_service import get_recommendation_service
+from app.utils.logger import setup_logger
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class HardwareClient:
