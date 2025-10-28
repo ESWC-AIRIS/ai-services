@@ -16,7 +16,6 @@ from app.models.user import PyObjectId
 class DeviceType(str, Enum):
     """기기 타입"""
     AIR_PURIFIER = "air_purifier"
-    DRYER = "dryer"
     AIR_CONDITIONER = "air_conditioner"
 
 
@@ -67,7 +66,6 @@ class DeviceListResponse(BaseModel):
 # 기기 타입별 지원 액션 매핑
 DEVICE_ACTIONS = {
     DeviceType.AIR_PURIFIER: ["turn_on", "turn_off", "clean", "auto"],
-    DeviceType.DRYER: ["dryer_on", "dryer_off", "dryer_start", "dryer_stop"],
     DeviceType.AIR_CONDITIONER: ["aircon_on", "aircon_off"] + [f"temp_{i}" for i in range(18, 31)]
 }
 

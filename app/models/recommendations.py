@@ -36,7 +36,7 @@ class DeviceAction(BaseModel):
 
 class DeviceControl(BaseModel):
     """기기 제어 정보"""
-    device_type: str = Field(..., description="기기 타입 (air_purifier, dryer, air_conditioner)")
+    device_type: str = Field(..., description="기기 타입 (air_purifier, air_conditioner)")
     device_id: Optional[str] = Field(None, description="기기 ID")
     
     # 기존 단일 액션 (하위 호환성)

@@ -182,8 +182,6 @@ async def control_lg_device(request: LGControlRequest):
         # 기기별 응답 메시지 생성
         if "air_purifier" in request.device_id.lower() or "air" in request.device_id.lower():
             message = "[GATEWAY] 스마트 기기(공기청정기) 제어 완료"
-        elif "dryer" in request.device_id.lower() or "dry" in request.device_id.lower():
-            message = "[GATEWAY] 스마트 기기 제어(건조기) 완료"
         elif "air_conditioner" in request.device_id.lower() or "ac" in request.device_id.lower():
             message = "[GATEWAY] 스마트 기기 제어(에어컨) 완료"
         elif "washer" in request.device_id.lower():

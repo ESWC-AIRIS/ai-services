@@ -143,7 +143,6 @@ class DeviceService:
 # 기기 타입별 지원 액션 매핑
 DEVICE_ACTIONS = {
     DeviceType.AIR_PURIFIER: ["turn_on", "turn_off", "clean", "auto"],
-    DeviceType.DRYER: ["dryer_on", "dryer_off", "dryer_start", "dryer_stop"],
     DeviceType.AIR_CONDITIONER: ["aircon_on", "aircon_off"] + [f"temp_{i}" for i in range(18, 31)]
 }
 

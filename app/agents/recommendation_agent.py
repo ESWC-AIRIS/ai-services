@@ -41,10 +41,9 @@ class GatewayTool:
         mapping = {
             "DEVICE_AIR_CONDITIONER": "air_conditioner",
             "DEVICE_AIR_PURIFIER": "air_purifier", 
-            "DEVICE_WASHER": "washer",
-            "DEVICE_DRYER": "dryer"
+            "DEVICE_WASHER": "washer"
         }
-        return mapping.get(gateway_device_type, gateway_device_type.lower())
+        return mapping.get(gateway_device_type, "unknown")
     
     async def get_user_devices(self) -> str:
         """사용자의 스마트 가전 목록 조회"""
@@ -296,7 +295,8 @@ class RecommendationAgent:
             1. 반드시 get_user_devices() 도구를 먼저 호출하여 실제 기기 목록을 확인하세요!
             2. 반드시 get_current_weather() 도구를 호출하여 날씨 정보를 확인하세요!
             3. device_id는 반드시 실제 사용자 기기 목록에서 가져온 ID만 사용하세요!
-            4. 도구를 사용하지 않고 추천을 생성하면 안 됩니다!
+            4. device_id가 None이거나 빈 값이면 절대 추천을 생성하지 마세요!
+            5. 도구를 사용하지 않고 추천을 생성하면 안 됩니다!
             
             사용 가능한 도구:
             - get_current_weather: 현재 날씨 조회 (필수)
@@ -320,7 +320,7 @@ class RecommendationAgent:
                 "title": "추천 제목",
                 "contents": "추천 내용",
                 "device_control": {{
-                    "device_type": "air_purifier|dryer|air_conditioner",
+                    "device_type": "air_purifier|air_conditioner",
                     "device_id": "실제 기기 ID",
                     "actions": [
                         {{
@@ -346,31 +346,25 @@ class RecommendationAgent:
             🔹 공기청정기:
             - 작동 제어: purifier_on, purifier_off
             - 바람 세기: wind_low, wind_mid, wind_high, wind_auto, wind_power(파워모드)
-            - 타이머: timer_start_{{n}}, timer_stop_{{n}} (예: timer_start_60)
+            - 실행 모드: circulator(터보), clean(청정), auto
             
             🔹 에어컨:
             - 작동 제어: aircon_on, aircon_off
             - 바람 세기: aircon_wind_low, aircon_wind_mid, aircon_wind_high, aircon_wind_auto
             - 온도 설정: temp_{{n}} (예: temp_18, temp_19, temp_20... temp_30)
-            - 타이머: aircon_timer_start_{{n}}, aircon_timer_stop_{{n}} (예: aircon_timer_start_0900)
+            - 실행 모드: aircon_dry(제습), aircon_clean(청정), aircon_cool(냉방)
             
-            🔹 건조기:
-            - 작동 제어: dryer_on, dryer_off, dryer_start, dryer_stop
-            - 알림: dryer_completed (완료 알림)
             
             ⚠️ 기기 상태별 액션 선택 가이드:
             
             📱 공기청정기 상태별 추천:
             - is_running=false: purifier_on (먼저 켜기)
-            - is_running=true: wind_low/mid/high/auto/power (바람 세기 조정)
+            - is_running=true: wind_low/mid/high/auto/power (바람 세기 조정), circulator/clean/auto (실행 모드 선택)
             
             🌡️ 에어컨 상태별 추천:
             - is_running=false: aircon_on (먼저 켜기)
-            - is_running=true: temp_18~30, aircon_wind_low/mid/high/auto (온도/바람 조정)
+            - is_running=true: temp_18~30 (온도 조정), aircon_wind_low/mid/high/auto (바람 세기 조정), aircon_dry/clean/cool (실행 모드 선택)
             
-            🔥 건조기 상태별 추천:
-            - is_running=false: dryer_on (먼저 켜기)
-            - is_running=true: dryer_start (작동 시작)
             
             ⚠️ 중요: device_id는 사용자 기기 목록에서 동적으로 가져와야 합니다!
             
