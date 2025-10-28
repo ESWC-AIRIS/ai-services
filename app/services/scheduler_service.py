@@ -92,6 +92,33 @@ class SchedulerService:
                 
                 logger.info(f"✅ 스케줄러 AI 추천 생성: {result['title']}")
                 
+                # MongoDB에 추천 저장
+                try:
+                    from app.core.database import get_database
+                    from app.services.recommendation_service import RecommendationService
+                    from app.models.recommendations import DeviceControl
+                    
+                    db = await get_database()
+                    recommendation_service = RecommendationService(db)
+                    
+                    # device_control 정보 추출 및 변환
+                    device_control_data = recommendation.get('device_control', {})
+                    device_control = DeviceControl(**device_control_data) if device_control_data else None
+                    
+                    recommendation_id = await recommendation_service.create_recommendation(
+                        title=recommendation['title'],
+                        contents=recommendation['contents'],
+                        device_control=device_control,
+                        user_id=user_id,
+                        mode="production"
+                    )
+                    
+                    logger.info(f"✅ 스케줄러 추천 MongoDB 저장 완료: {recommendation_id}")
+                    result["recommendation_id"] = recommendation_id
+                    
+                except Exception as e:
+                    logger.error(f"❌ 스케줄러 추천 MongoDB 저장 실패: {e}")
+                
                 # 제어 정보가 있으면 로그 출력
                 if result.get("device_control"):
                     device_info = result["device_control"]

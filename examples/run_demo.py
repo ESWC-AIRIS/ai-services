@@ -40,7 +40,7 @@ class IntegratedDemo:
                 choice = input("\n선택 (1-3): ").strip()
                 
                 if choice == "1":
-                    self.run_agent_demo()
+                    await self.run_agent_demo()
                     break
                 elif choice == "2":
                     await self.run_full_system_demo()
@@ -242,7 +242,7 @@ class IntegratedDemo:
             try:
                 # 1. AI Agent로 추천 생성
                 print("🤖 AI Agent 추천 생성 중...")
-                recommendation = demo_generate_recommendation(scenario_name)
+                recommendation = await demo_generate_recommendation(scenario_name)
                 
                 print(f"📝 추천 제목: {recommendation['title']}")
                 print(f"💬 추천 내용: {recommendation['contents']}")
