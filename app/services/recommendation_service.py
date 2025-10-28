@@ -44,7 +44,7 @@ class RecommendationService:
                 contents=contents,
                 device_control=device_control,
                 mode=mode,
-                status=RecommendationStatus.SENT_TO_HARDWARE
+                status=RecommendationStatus.PENDING
             )
             
             result = await self.collection.insert_one(recommendation.dict(by_alias=True))

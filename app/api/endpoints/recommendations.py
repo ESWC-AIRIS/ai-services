@@ -87,6 +87,24 @@ async def send_to_hardware(request: HardwareRecommendationRequest):
         logger.info(f"  - 제목: {request.title}")
         logger.info(f"  - 내용: {request.contents}")
         
+        # 추천 서비스 가져오기
+        from app.core.database import get_database
+        from app.services.recommendation_service import RecommendationService
+        
+        db = await get_database()
+        recommendation_service = RecommendationService(db)
+        
+        # MongoDB에 추천 데이터 저장 (운영 모드)
+        recommendation_id = await recommendation_service.create_recommendation(
+            title=request.title,
+            contents=request.contents,
+            device_control=request.device_control,
+            user_id=request.user_id,
+            mode="production"
+        )
+        
+        logger.info(f"✅ MongoDB에 추천 저장 완료: {recommendation_id}")
+        
         # 하드웨어에 추천 전송
         hardware_response = await hardware_client.send_recommendation(
             request.recommendation_id,

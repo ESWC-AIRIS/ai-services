@@ -73,7 +73,7 @@ class IntegratedDemo:
             
             # 날씨 시나리오 테스트
             print("\n🌤️ 날씨 시나리오 테스트")
-        print("=" * 50)
+            print("=" * 50)
             
             weather_scenarios = [
                 ("여름폭염", "현재 기온이 35도로 폭염주의보가 발령되었습니다."),
@@ -105,7 +105,7 @@ class IntegratedDemo:
             
             # 시간대별 시나리오 테스트
             print("\n🕐 시간대별 시나리오 테스트")
-        print("=" * 50)
+            print("=" * 50)
         
             time_scenarios = [
                 ("아침7시", "아침 7시, 출근 준비 중입니다. 실내 온도 22도."),

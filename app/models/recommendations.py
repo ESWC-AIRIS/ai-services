@@ -60,6 +60,8 @@ class HardwareRecommendationRequest(BaseModel):
     recommendation_id: str = Field(..., description="추천 ID")
     title: str = Field(..., description="추천 제목")
     contents: str = Field(..., description="추천 내용")
+    user_id: Optional[str] = Field("default_user", description="사용자 ID")
+    device_control: Optional[DeviceControl] = Field(None, description="기기 제어 정보")
 
 
 class RecommendationCreateResponse(BaseModel):
