@@ -151,7 +151,7 @@ async def send_to_hardware(request: HardwareRecommendationRequest):
             recommendation_id=recommendation_id,
             message="AI 추천이 하드웨어에 전송되었습니다"
         )
-        
+            
     except Exception as e:
         logger.error(f"❌ 하드웨어 전송 실패: {e}")
         raise HTTPException(status_code=500, detail=f"하드웨어 전송 실패: {str(e)}")
@@ -223,7 +223,7 @@ async def create_demo_recommendation(request: RecommendationCreateRequest):
             recommendation_id=recommendation_id,
             message="데모 추천이 하드웨어에 전송되었습니다"
         )
-        
+            
     except Exception as e:
         logger.error(f"❌ 데모 추천 생성 실패: {e}")
         raise HTTPException(status_code=500, detail=f"데모 추천 생성 실패: {str(e)}")
@@ -274,9 +274,9 @@ async def feedback_recommendation(request: RecommendationConfirmRequest):
                         
                         logger.info(f"✅ 액션 {i+1} 완료: {control_result}")
                         
-                        # 지연 시간 적용 (기본 10초, 마지막 액션 제외)
+                        # 지연 시간 적용 (기본 3초, 마지막 액션 제외)
                         if i < len(sorted_actions) - 1:  # 마지막 액션이 아닌 경우
-                            delay_time = action.delay_seconds if action.delay_seconds > 0 else 10
+                            delay_time = action.delay_seconds if action.delay_seconds > 0 else 3
                             logger.info(f"⏳ {delay_time}초 대기 중... (기기 제어 간 충분한 간격)")
                             await asyncio.sleep(delay_time)
                     

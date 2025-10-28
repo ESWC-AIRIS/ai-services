@@ -239,9 +239,9 @@ class IntegratedDemo:
                         else:
                             print(f"❌ 액션 {i+1} 실패: {response.status_code}")
                     
-                    # 지연 시간 적용 (기본 10초, 마지막 액션 제외)
+                    # 지연 시간 적용 (기본 3초, 마지막 액션 제외)
                     if i < len(sorted_actions) - 1:  # 마지막 액션이 아닌 경우
-                        delay_time = delay_seconds if delay_seconds > 0 else 10
+                        delay_time = delay_seconds if delay_seconds > 0 else 3
                         print(f"⏳ {delay_time}초 대기 중... (기기 제어 간 충분한 간격)")
                         await asyncio.sleep(delay_time)
                 
@@ -380,4 +380,4 @@ async def main():
 
 
 if __name__ == "__main__":
-        asyncio.run(main())
+    asyncio.run(main())

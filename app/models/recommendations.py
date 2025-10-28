@@ -31,7 +31,7 @@ class DeviceAction(BaseModel):
     action: str = Field(..., description="제어 액션")
     order: int = Field(..., description="실행 순서")
     description: Optional[str] = Field(None, description="액션 설명")
-    delay_seconds: Optional[int] = Field(10, description="이전 액션과의 지연 시간(초) - 기본 10초")
+    delay_seconds: Optional[int] = Field(3, description="이전 액션과의 지연 시간(초) - 기본 3초")
 
 
 class DeviceControl(BaseModel):

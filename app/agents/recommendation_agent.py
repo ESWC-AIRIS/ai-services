@@ -339,7 +339,7 @@ class RecommendationAgent:
              - 타이머나 알림이 필요하면 마지막에 추가하세요
              - order는 1부터 순차적으로 설정하세요
              - 각 액션의 목적을 description에 명확히 설명하세요
-             - delay_seconds는 기본 10초로 설정 (기기 제어 간 충분한 간격 필요)
+             - delay_seconds는 기본 3초로 설정 (기기 제어 간 충분한 간격 필요)
             
             기기별 제어 액션 (실제 하드웨어 명세서 기반):
             
@@ -715,7 +715,7 @@ async def _save_recommendation_to_mongodb(recommendation: Dict[str, Any], mode: 
                     action=action_data.get("action"),
                     order=action_data.get("order", 1),
                     description=action_data.get("description"),
-                    delay_seconds=action_data.get("delay_seconds", 10)
+                    delay_seconds=action_data.get("delay_seconds", 3)
                 )
                 actions.append(action)
             
