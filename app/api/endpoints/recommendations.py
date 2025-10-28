@@ -175,9 +175,9 @@ async def create_demo_recommendation(request: RecommendationCreateRequest):
         raise HTTPException(status_code=500, detail=f"데모 추천 생성 실패: {str(e)}")
 
 
-@router.post("/confirm", response_model=RecommendationConfirmResponse)
-async def confirm_recommendation(request: RecommendationConfirmRequest):
-    """HW → AI 사용자 응답 처리"""
+@router.post("/feedback", response_model=RecommendationConfirmResponse)
+async def feedback_recommendation(request: RecommendationConfirmRequest):
+    """하드웨어팀에서 사용자 응답 피드백 처리"""
     try:
         # 추천 서비스 가져오기
         from app.core.database import get_database
