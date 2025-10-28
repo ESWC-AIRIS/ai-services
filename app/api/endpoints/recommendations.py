@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from typing import Dict, Any, List, Optional
 import logging
 import httpx
+import asyncio
 from app.core.config import *
 from app.models.recommendations import (
     RecommendationCreateRequest, RecommendationCreateResponse,
@@ -101,9 +102,30 @@ async def send_to_hardware(request: HardwareRecommendationRequest):
         db = await get_database()
         recommendation_service = RecommendationService(db)
         
-        # device_control 정보 추출 및 변환
+        # device_control 정보 추출 및 변환 (actions 배열 지원)
         device_control_data = ai_recommendation.get('device_control', {})
-        device_control = DeviceControl(**device_control_data) if device_control_data else None
+        
+        if "actions" in device_control_data:
+            # 새로운 actions 배열 방식
+            from app.models.recommendations import DeviceAction
+            actions = []
+            for action_data in device_control_data.get("actions", []):
+                action = DeviceAction(
+                    action=action_data.get("action"),
+                    order=action_data.get("order", 1),
+                    description=action_data.get("description"),
+                    delay_seconds=action_data.get("delay_seconds", 0)
+                )
+                actions.append(action)
+            
+            device_control = DeviceControl(
+                device_type=device_control_data.get("device_type"),
+                device_id=device_control_data.get("device_id"),
+                actions=actions
+            )
+        else:
+            # 기존 단일 action 방식 (하위 호환성)
+            device_control = DeviceControl(**device_control_data) if device_control_data else None
         
         recommendation_id = await recommendation_service.create_recommendation(
             title=ai_recommendation['title'],
@@ -153,8 +175,30 @@ async def create_demo_recommendation(request: RecommendationCreateRequest):
         if not ai_recommendation or not ai_recommendation.get('device_control'):
             raise HTTPException(status_code=500, detail="데모 추천 생성에 실패했습니다.")
         
-        # 기기 제어 정보 추출
-        device_control = DeviceControl(**ai_recommendation['device_control'])
+        # 기기 제어 정보 추출 및 변환 (actions 배열 지원)
+        device_control_data = ai_recommendation['device_control']
+        
+        if "actions" in device_control_data:
+            # 새로운 actions 배열 방식
+            from app.models.recommendations import DeviceAction
+            actions = []
+            for action_data in device_control_data.get("actions", []):
+                action = DeviceAction(
+                    action=action_data.get("action"),
+                    order=action_data.get("order", 1),
+                    description=action_data.get("description"),
+                    delay_seconds=action_data.get("delay_seconds", 0)
+                )
+                actions.append(action)
+            
+            device_control = DeviceControl(
+                device_type=device_control_data.get("device_type"),
+                device_id=device_control_data.get("device_id"),
+                actions=actions
+            )
+        else:
+            # 기존 단일 action 방식 (하위 호환성)
+            device_control = DeviceControl(**device_control_data)
         
         # MongoDB에 추천 데이터 저장 (데모 모드)
         recommendation_id = await recommendation_service.create_recommendation(
@@ -208,15 +252,43 @@ async def feedback_recommendation(request: RecommendationConfirmRequest):
         # 사용자가 YES로 응답한 경우 기기 제어 실행
         if request.confirm.upper() == "YES" and updated_recommendation.device_control:
             try:
-                # Gateway API로 기기 제어 (기존 GatewayClient 사용)
+                # Gateway API로 기기 제어 (actions 배열 지원)
                 from app.api.endpoints.devices import gateway_client
                 
-                control_result = await gateway_client.control_device(
-                    device_id=updated_recommendation.device_control.device_id,
-                    action=updated_recommendation.device_control.action
-                )
+                device_control = updated_recommendation.device_control
                 
-                logger.info(f"✅ 기기 제어 실행 완료: {control_result}")
+                if device_control.actions:
+                    # 새로운 actions 배열 방식 - 순차적으로 실행
+                    logger.info(f"🎯 액션 시퀀스 실행 시작: {len(device_control.actions)}개 액션")
+                    
+                    # order 순서대로 정렬
+                    sorted_actions = sorted(device_control.actions, key=lambda x: x.order)
+                    
+                    for i, action in enumerate(sorted_actions):
+                        logger.info(f"📋 액션 {i+1}/{len(sorted_actions)} 실행: {action.action} - {action.description}")
+                        
+                        control_result = await gateway_client.control_device(
+                            device_id=device_control.device_id,
+                            action=action.action
+                        )
+                        
+                        logger.info(f"✅ 액션 {i+1} 완료: {control_result}")
+                        
+                        # 지연 시간이 있으면 대기
+                        if action.delay_seconds > 0:
+                            logger.info(f"⏳ {action.delay_seconds}초 대기 중...")
+                            await asyncio.sleep(action.delay_seconds)
+                    
+                    logger.info(f"🎉 모든 액션 시퀀스 실행 완료!")
+                    
+                else:
+                    # 기존 단일 action 방식 (하위 호환성)
+                    control_result = await gateway_client.control_device(
+                        device_id=device_control.device_id,
+                        action=device_control.action
+                    )
+                    
+                    logger.info(f"✅ 기기 제어 실행 완료: {control_result}")
                 
             except Exception as e:
                 logger.warning(f"⚠️ 기기 제어 실행 실패: {e}")

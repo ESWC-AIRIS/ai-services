@@ -54,7 +54,7 @@ class IntegratedDemo:
                 print("\n👋 데모를 종료합니다.")
                 return
     
-    def run_agent_demo(self):
+    async def run_agent_demo(self):
         """LangChain Agent 직접 테스트 데모"""
         print("\n🤖 LangChain Agent 직접 테스트")
         print("=" * 60)
@@ -65,7 +65,7 @@ class IntegratedDemo:
             # 기본 Agent 테스트
             print("\n🎯 기본 Agent 테스트")
             print("=" * 50)
-            basic_success = demo_test_agent()
+            basic_success = await demo_test_agent()
             
             if not basic_success:
                 print("❌ 기본 테스트 실패로 데모를 중단합니다.")
@@ -91,7 +91,7 @@ class IntegratedDemo:
                 
                 try:
                     # AI Agent로 추천 생성만 (하드웨어 통신 없음)
-                    recommendation = demo_generate_recommendation(scenario_name)
+                    recommendation = await demo_generate_recommendation(scenario_name)
                     
                     print(f"📝 제목: {recommendation['title']}")
                     print(f"💬 내용: {recommendation['contents']}")
@@ -121,7 +121,7 @@ class IntegratedDemo:
                 
                 try:
                     # AI Agent로 추천 생성만 (하드웨어 통신 없음)
-                    recommendation = demo_generate_recommendation(time_name)
+                    recommendation = await demo_generate_recommendation(time_name)
                     
                     print(f"📝 제목: {recommendation['title']}")
                     print(f"💬 내용: {recommendation['contents']}")
@@ -187,34 +187,122 @@ class IntegratedDemo:
             return {"confirm": "NO", "message": "통신 실패"}
     
     async def _control_device(self, device_control):
-        """실제 기기 제어 (Gateway API 호출)"""
+        """실제 기기 제어 (Gateway API 호출) - Actions 배열 지원"""
         import httpx
+        import asyncio
         
         try:
-            # Gateway API로 실제 기기 제어
-            # 여기서는 Mock 응답으로 시뮬레이션
             device_type = device_control.get('device_type')
-            action = device_control.get('action')
+            device_id = device_control.get('device_id')
             
-            print(f"🎯 Gateway API 호출: {device_type} -> {action}")
+            # 실제 Gateway API 호출
+            from app.core.config import GATEWAY_URL
+            gateway_url = GATEWAY_URL
             
-            # 실제로는 Gateway API 호출
-            # gateway_url = os.getenv("GATEWAY_URL", "http://localhost:9000")
-            # async with httpx.AsyncClient() as client:
-            #     response = await client.post(f"{gateway_url}/api/lg/control", json={
-            #         "device_id": "실제_기기_ID",
-            #         "action": action
-            #     })
+            print(f"🎯 Gateway API 호출: {device_type} (ID: {device_id})")
+            print(f"🌐 Gateway URL: {gateway_url}")
             
+            # Actions 배열 지원
+            if "actions" in device_control and device_control["actions"]:
+                # 새로운 actions 배열 방식 - 순차적으로 실행
+                actions = device_control["actions"]
+                print(f"🎯 액션 시퀀스 실행 시작: {len(actions)}개 액션")
+                
+                # order 순서대로 정렬
+                sorted_actions = sorted(actions, key=lambda x: x.get("order", 1))
+                
+                success_count = 0
+                for i, action_data in enumerate(sorted_actions):
+                    action = action_data.get("action")
+                    description = action_data.get("description", "")
+                    delay_seconds = action_data.get("delay_seconds", 0)
+                    
+                    print(f"📋 액션 {i+1}/{len(sorted_actions)} 실행: {action} - {description}")
+                    
+                    # Gateway API 호출
+                    async with httpx.AsyncClient() as client:
+                        response = await client.post(
+                            f"{gateway_url}/api/lg/control",
+                            json={
+                                "device_id": device_id,
+                                "action": action
+                            },
+                            timeout=10.0
+                        )
+                        
+                        if response.status_code == 200:
+                            result = response.json()
+                            print(f"✅ 액션 {i+1} 완료: {result}")
+                            success_count += 1
+                        else:
+                            print(f"❌ 액션 {i+1} 실패: {response.status_code}")
+                    
+                    # 지연 시간이 있으면 대기
+                    if delay_seconds > 0:
+                        print(f"⏳ {delay_seconds}초 대기 중...")
+                        await asyncio.sleep(delay_seconds)
+                
+                print(f"🎉 액션 시퀀스 실행 완료! ({success_count}/{len(sorted_actions)} 성공)")
+                
+                return {
+                    "success": success_count == len(sorted_actions),
+                    "message": f"{device_type} 액션 시퀀스 실행 완료 ({success_count}/{len(sorted_actions)} 성공)",
+                    "device_type": device_type,
+                    "actions_executed": success_count,
+                    "total_actions": len(sorted_actions)
+                }
+                
+            else:
+                # 기존 단일 action 방식 (하위 호환성)
+                action = device_control.get('action')
+                print(f"🎯 단일 액션 실행: {action}")
+                
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        f"{gateway_url}/api/lg/control",
+                        json={
+                            "device_id": device_id,
+                            "action": action
+                        },
+                        timeout=10.0
+                    )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        print(f"✅ Gateway API 응답: {result}")
+                        return {
+                            "success": True,
+                            "message": f"{device_type} {action} 제어 완료",
+                            "device_type": device_type,
+                            "action": action,
+                            "gateway_response": result
+                        }
+                    else:
+                        print(f"❌ Gateway API 오류: {response.status_code}")
+                        return {
+                            "success": False,
+                            "message": f"Gateway API 오류: {response.status_code}",
+                            "device_type": device_type,
+                            "action": action
+                        }
+                    
+        except httpx.ConnectError:
+            print(f"❌ Gateway 서버에 연결할 수 없습니다. ({gateway_url})")
+            print("💡 Gateway 서버가 실행 중인지 확인하세요.")
             return {
-                "success": True,
-                "message": f"{device_type} {action} 제어 완료",
-                "device_type": device_type,
-                "action": action
+                "success": False,
+                "message": "Gateway 서버 연결 실패",
+                "device_type": device_control.get('device_type'),
+                "action": device_control.get('action')
             }
         except Exception as e:
             print(f"❌ 기기 제어 실패: {e}")
-            return {"success": False, "message": "제어 실패"}
+            return {
+                "success": False,
+                "message": f"제어 실패: {str(e)}",
+                "device_type": device_control.get('device_type'),
+                "action": device_control.get('action')
+            }
     
     async def run_full_system_demo(self):
         """전체 시스템 통합 테스트 (AI + 하드웨어 + Gateway)"""

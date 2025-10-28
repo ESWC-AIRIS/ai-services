@@ -5,11 +5,17 @@ MongoDB 추천 관리 모델
 
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 from enum import Enum
 
 from app.models.user import PyObjectId
+
+
+def get_kst_now() -> datetime:
+    """한국 표준시(KST) 현재 시간 반환"""
+    kst = timezone(timedelta(hours=9))  # UTC+9
+    return datetime.now(kst)
 
 
 class RecommendationStatus(str, Enum):
@@ -20,11 +26,24 @@ class RecommendationStatus(str, Enum):
     EXPIRED = "expired"          # 만료됨 (시간 초과)
 
 
+class DeviceAction(BaseModel):
+    """개별 기기 액션"""
+    action: str = Field(..., description="제어 액션")
+    order: int = Field(..., description="실행 순서")
+    description: Optional[str] = Field(None, description="액션 설명")
+    delay_seconds: Optional[int] = Field(0, description="이전 액션과의 지연 시간(초)")
+
+
 class DeviceControl(BaseModel):
     """기기 제어 정보"""
     device_type: str = Field(..., description="기기 타입 (air_purifier, dryer, air_conditioner)")
-    action: str = Field(..., description="제어 액션")
     device_id: Optional[str] = Field(None, description="기기 ID")
+    
+    # 기존 단일 액션 (하위 호환성)
+    action: Optional[str] = Field(None, description="제어 액션 (단일 액션용)")
+    
+    # 새로운 액션 리스트 (복합 액션용)
+    actions: Optional[List[DeviceAction]] = Field(None, description="순차 실행할 액션 리스트")
 
 
 class Recommendation(BaseModel):
@@ -39,7 +58,7 @@ class Recommendation(BaseModel):
     status: RecommendationStatus = Field(default=RecommendationStatus.PENDING, description="추천 상태")
     mode: str = Field(..., description="데모/운영 구분 (demo/production)")
     user_response: Optional[str] = Field(None, description="사용자 응답 (YES/NO)")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="생성 시간")
+    created_at: datetime = Field(default_factory=get_kst_now, description="생성 시간 (KST)")
     confirmed_at: Optional[datetime] = Field(None, description="확인 시간")
     hardware_sent_at: Optional[datetime] = Field(None, description="하드웨어 전송 시간")
     
@@ -97,5 +116,5 @@ class RecommendationResponse(BaseModel):
 
 def generate_recommendation_id() -> str:
     """추천 ID 생성 (rec_YYYYMMDD_HHMMSS)"""
-    now = datetime.utcnow()
+    now = get_kst_now()
     return f"rec_{now.strftime('%Y%m%d_%H%M%S')}"

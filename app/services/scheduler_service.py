@@ -101,9 +101,30 @@ class SchedulerService:
                     db = await get_database()
                     recommendation_service = RecommendationService(db)
                     
-                    # device_control 정보 추출 및 변환
+                    # device_control 정보 추출 및 변환 (actions 배열 지원)
                     device_control_data = recommendation.get('device_control', {})
-                    device_control = DeviceControl(**device_control_data) if device_control_data else None
+                    
+                    if "actions" in device_control_data:
+                        # 새로운 actions 배열 방식
+                        from app.models.recommendations import DeviceAction
+                        actions = []
+                        for action_data in device_control_data.get("actions", []):
+                            action = DeviceAction(
+                                action=action_data.get("action"),
+                                order=action_data.get("order", 1),
+                                description=action_data.get("description"),
+                                delay_seconds=action_data.get("delay_seconds", 0)
+                            )
+                            actions.append(action)
+                        
+                        device_control = DeviceControl(
+                            device_type=device_control_data.get("device_type"),
+                            device_id=device_control_data.get("device_id"),
+                            actions=actions
+                        )
+                    else:
+                        # 기존 단일 action 방식 (하위 호환성)
+                        device_control = DeviceControl(**device_control_data) if device_control_data else None
                     
                     recommendation_id = await recommendation_service.create_recommendation(
                         title=recommendation['title'],

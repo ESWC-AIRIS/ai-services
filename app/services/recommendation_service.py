@@ -11,7 +11,7 @@ import logging
 
 from app.models.recommendations import (
     Recommendation, RecommendationStatus, DeviceControl,
-    generate_recommendation_id
+    generate_recommendation_id, get_kst_now
 )
 from app.core.database import get_database
 
@@ -92,7 +92,7 @@ class RecommendationService:
             update_data = {
                 "status": status,
                 "user_response": user_response.upper(),
-                "confirmed_at": datetime.utcnow()
+                "confirmed_at": get_kst_now()
             }
             
             result = await self.collection.update_one(
@@ -119,7 +119,7 @@ class RecommendationService:
         try:
             result = await self.collection.update_one(
                 {"recommendation_id": recommendation_id},
-                {"$set": {"hardware_sent_at": datetime.utcnow()}}
+                {"$set": {"hardware_sent_at": get_kst_now()}}
             )
             
             if result.modified_count > 0:
@@ -192,7 +192,7 @@ class RecommendationService:
     async def cleanup_expired_recommendations(self, hours: int = 24) -> int:
         """만료된 추천 정리 (24시간 이상 대기중인 것들)"""
         try:
-            cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+            cutoff_time = get_kst_now() - timedelta(hours=hours)
             
             result = await self.collection.update_many(
                 {

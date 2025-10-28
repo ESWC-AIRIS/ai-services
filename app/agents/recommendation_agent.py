@@ -306,9 +306,12 @@ class RecommendationAgent:
             추천 워크플로우 (반드시 순서대로 실행):
             1. get_current_weather("Seoul") 호출하여 날씨 확인
             2. get_user_devices() 호출하여 사용자 기기 목록 확인 (필수!)
-            3. 필요시 get_device_state(device_id)로 특정 기기 상태 확인
-            4. 날씨와 기기 정보를 종합하여 최적의 추천 생성
-            5. device_id는 반드시 실제 사용자 기기 목록에서 가져온 ID 사용!
+            3. 추천할 기기를 선택한 후 get_device_state(device_id)로 해당 기기 상태 확인 (필수!)
+            4. 기기 상태에 따라 적절한 액션 선택:
+               - 기기가 꺼져있으면: 먼저 켜기 (purifier_on, aircon_on, dryer_on)
+               - 기기가 켜져있으면: 세부 설정 (wind_power, temp_24 등)
+            5. 날씨와 기기 정보를 종합하여 최적의 추천 생성
+            6. device_id는 반드시 실제 사용자 기기 목록에서 가져온 ID 사용!
             
             ⚠️ 도구를 사용하지 않고 추천을 생성하면 안 됩니다!
             
@@ -318,10 +321,24 @@ class RecommendationAgent:
                 "contents": "추천 내용",
                 "device_control": {{
                     "device_type": "air_purifier|dryer|air_conditioner",
-                    "action": "기기별 액션 (아래 참조)",
-                    "device_id": "실제 기기 ID"
+                    "device_id": "실제 기기 ID",
+                    "actions": [
+                        {{
+                            "action": "액션명",
+                            "order": 1,
+                            "description": "액션 설명"
+                        }}
+                    ]
                 }}
             }}
+            
+            ⚠️ 액션 시퀀스 생성 규칙:
+            - 반드시 get_device_state로 기기 상태를 먼저 확인하세요
+            - 기기가 꺼져있으면(is_running=false) 먼저 켜기 액션을 추가하세요
+            - 요청된 기능에 필요한 모든 액션을 순서대로 배열에 추가하세요
+            - 타이머나 알림이 필요하면 마지막에 추가하세요
+            - order는 1부터 순차적으로 설정하세요
+            - 각 액션의 목적을 description에 명확히 설명하세요
             
             기기별 제어 액션 (실제 하드웨어 명세서 기반):
             
@@ -340,6 +357,20 @@ class RecommendationAgent:
             - 작동 제어: dryer_on, dryer_off, dryer_start, dryer_stop
             - 알림: dryer_completed (완료 알림)
             
+            ⚠️ 기기 상태별 액션 선택 가이드:
+            
+            📱 공기청정기 상태별 추천:
+            - is_running=false: purifier_on (먼저 켜기)
+            - is_running=true: wind_low/mid/high/auto/power (바람 세기 조정)
+            
+            🌡️ 에어컨 상태별 추천:
+            - is_running=false: aircon_on (먼저 켜기)
+            - is_running=true: temp_18~30, aircon_wind_low/mid/high/auto (온도/바람 조정)
+            
+            🔥 건조기 상태별 추천:
+            - is_running=false: dryer_on (먼저 켜기)
+            - is_running=true: dryer_start (작동 시작)
+            
             ⚠️ 중요: device_id는 사용자 기기 목록에서 동적으로 가져와야 합니다!
             
             ⚠️ 매우 중요한 규칙:
@@ -354,7 +385,9 @@ class RecommendationAgent:
             ⚠️ 반드시 다음 순서로 실행하세요:
             1. 먼저 get_user_devices() 도구를 호출하세요!
             2. 그 다음 get_current_weather("Seoul") 도구를 호출하세요!
-            3. 마지막에 추천을 생성하세요!
+            3. 추천할 기기를 선택한 후 get_device_state(device_id)로 상태를 확인하세요!
+            4. 기기 상태에 따라 필요한 액션 시퀀스를 생성하세요!
+            5. 마지막에 추천을 생성하세요!
             
             {agent_scratchpad}
             """)
@@ -408,13 +441,24 @@ class RecommendationAgent:
                 # JSON 파싱
                 data = json.loads(json_str)
                 
+                device_control_data = data.get("device_control", {})
+                
+                # actions 배열이 있으면 그대로 사용, 없으면 기존 방식으로 변환
+                if "actions" in device_control_data:
+                    # 새로운 actions 배열 방식
+                    device_control = device_control_data
+                else:
+                    # 기존 단일 action 방식 (하위 호환성)
+                    device_control = {
+                        "device_type": device_control_data.get("device_type", "air_conditioner"),
+                        "action": device_control_data.get("action", "turn_on"),
+                        "device_id": device_control_data.get("device_id")
+                    }
+                
                 return {
                     "title": data.get("title", "스마트 홈 추천"),
                     "contents": data.get("contents", "현재 상황에 맞는 스마트 홈 기기 제어를 추천드립니다."),
-                    "device_control": data.get("device_control", {
-                        "device_type": "air_conditioner",
-                        "action": "turn_on"
-                    })
+                    "device_control": device_control
                 }
             except (json.JSONDecodeError, KeyError) as e:
                 print(f"❌ JSON 파싱 실패: {e}")
@@ -656,8 +700,36 @@ async def _save_recommendation_to_mongodb(recommendation: Dict[str, Any], mode: 
         db = await get_database()
         recommendation_service = RecommendationService(db)
         
-        # device_control에서 정보 추출
-        device_control = recommendation.get("device_control", {})
+        # device_control에서 정보 추출 및 변환
+        device_control_data = recommendation.get("device_control", {})
+        
+        # DeviceControl 객체로 변환 (actions 배열 지원)
+        from app.models.recommendations import DeviceControl, DeviceAction
+        
+        if "actions" in device_control_data:
+            # 새로운 actions 배열 방식
+            actions = []
+            for action_data in device_control_data.get("actions", []):
+                action = DeviceAction(
+                    action=action_data.get("action"),
+                    order=action_data.get("order", 1),
+                    description=action_data.get("description"),
+                    delay_seconds=action_data.get("delay_seconds", 0)
+                )
+                actions.append(action)
+            
+            device_control = DeviceControl(
+                device_type=device_control_data.get("device_type"),
+                device_id=device_control_data.get("device_id"),
+                actions=actions
+            )
+        else:
+            # 기존 단일 action 방식 (하위 호환성)
+            device_control = DeviceControl(
+                device_type=device_control_data.get("device_type", "air_conditioner"),
+                action=device_control_data.get("action", "turn_on"),
+                device_id=device_control_data.get("device_id")
+            )
         
         recommendation_id = await recommendation_service.create_recommendation(
             title=recommendation.get("title", "AI 추천"),
