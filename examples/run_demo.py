@@ -106,7 +106,7 @@ class IntegratedDemo:
             # 시간대별 시나리오 테스트
             print("\n🕐 시간대별 시나리오 테스트")
             print("=" * 50)
-        
+            
             time_scenarios = [
                 ("아침7시", "아침 7시, 출근 준비 중입니다. 실내 온도 22도."),
                 ("점심12시", "점심 12시, 실내 온도 28도, 점심 준비로 부엌이 더워졌습니다."),
@@ -166,8 +166,9 @@ class IntegratedDemo:
             
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{hardware_url}/api/recommendations",
+                    f"{hardware_url}/api/recommendations/",
                     json={
+                        "recommendation_id": recommendation.get('recommendation_id', 'demo_rec_001'),
                         "title": recommendation['title'],
                         "contents": recommendation['contents']
                     },
@@ -318,6 +319,8 @@ class IntegratedDemo:
         print("1. 여름 폭염 상황에서 에어컨 추천")
         print("2. 겨울 한파 상황에서 난방 추천")
         print("3. 봄 황사 상황에서 공기청정기 추천")
+        print("\n🔄 전체 플로우:")
+        print("AI Agent → 하드웨어 전송 → 사용자 피드백 → 하드웨어→AI 피드백 → Gateway API 기기 제어")
         
         test_scenarios = [
             ("여름폭염", "현재 기온이 35도로 폭염주의보가 발령되었습니다."),
@@ -340,14 +343,33 @@ class IntegratedDemo:
                 print(f"🎯 기기 제어: {recommendation['device_control']}")
                 
                 # 2. 하드웨어에 추천 전송
-                print(f"\n📱 하드웨어 Mock 서버에 추천 전송 중...")
+                print(f"\n📱 하드웨어 서버에 추천 전송 중...")
                 hardware_response = await self._send_to_hardware(recommendation)
                 
-                print(f"👤 사용자 응답: {hardware_response['confirm']}")
-                print(f"💬 응답 메시지: {hardware_response['message']}")
+                print(f"📋 추천 ID: {hardware_response.get('recommendation_id', 'UNKNOWN')}")
+                print(f"💬 하드웨어 응답: {hardware_response.get('message', 'No message')}")
                 
-                # 3. 사용자가 YES로 응답한 경우 실제 기기 제어
-                if hardware_response['confirm'] == 'YES':
+                # 하드웨어 서버는 단순히 추천을 받았다고 응답만 함
+                # 실제 사용자 피드백은 별도로 /api/recommendations/feedback으로 받음
+                print(f"✅ 하드웨어 서버에 추천 전송 완료")
+                
+                # 3. 하드웨어에서 피드백 대기 (production과 동일)
+                print(f"\n⏳ 하드웨어에서 사용자 피드백 대기 중...")
+                print(f"💡 실제 환경에서는 하드웨어가 사용자 응답을 받아서 피드백을 전송합니다.")
+                print(f"🎯 데모에서는 피드백 수신을 시뮬레이션합니다.")
+                
+                # 피드백 대기 시뮬레이션 (실제로는 하드웨어에서 /api/recommendations/feedback으로 전송됨)
+                await asyncio.sleep(60)  # 실제 대기 시간 시뮬레이션 (60초)
+                
+                # 하드웨어에서 피드백이 왔다고 가정하고 처리
+                user_feedback = "YES"  # 데모에서는 항상 YES로 설정
+                print(f"📨 하드웨어에서 피드백 수신: {user_feedback}")
+                
+                # 피드백 처리 (실제로는 /api/recommendations/feedback 엔드포인트에서 자동 처리됨)
+                print(f"🔄 피드백 처리 중...")
+                
+                # 사용자가 YES로 응답한 경우 실제 기기 제어 실행
+                if user_feedback == 'YES':
                     print(f"\n🔧 Gateway API로 실제 기기 제어 실행...")
                     control_result = await self._control_device(recommendation['device_control'])
                     print(f"✅ 기기 제어 결과: {control_result['message']}")
@@ -380,4 +402,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+        asyncio.run(main())

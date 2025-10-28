@@ -79,84 +79,6 @@ class HardwareClient:
 hardware_client = HardwareClient()
 
 
-@router.post("/", response_model=RecommendationCreateResponse)
-async def send_to_hardware(request: HardwareRecommendationRequest):
-    """AI → HW 추천 전달 (명세서)"""
-    try:
-        logger.info(f"🤖 AI Agent로 추천 생성 및 하드웨어 전달:")
-        logger.info(f"  - 사용자 ID: {request.user_id}")
-        
-        # AI Agent로 추천 생성 (운영 모드)
-        from app.agents.recommendation_agent import RecommendationAgent
-        
-        agent = RecommendationAgent()
-        ai_recommendation = await agent.generate_recommendation("운영 모드에서 스마트 홈 추천을 생성해주세요.")
-        
-        if not ai_recommendation or not ai_recommendation.get('device_control'):
-            raise HTTPException(status_code=500, detail="AI 추천 생성에 실패했습니다.")
-        
-        # MongoDB에 추천 데이터 저장 (운영 모드)
-        from app.core.database import get_database
-        from app.services.recommendation_service import RecommendationService
-        
-        db = await get_database()
-        recommendation_service = RecommendationService(db)
-        
-        # device_control 정보 추출 및 변환 (actions 배열 지원)
-        device_control_data = ai_recommendation.get('device_control', {})
-        
-        if "actions" in device_control_data:
-            # 새로운 actions 배열 방식
-            from app.models.recommendations import DeviceAction
-            actions = []
-            for action_data in device_control_data.get("actions", []):
-                action = DeviceAction(
-                    action=action_data.get("action"),
-                    order=action_data.get("order", 1),
-                    description=action_data.get("description"),
-                    delay_seconds=action_data.get("delay_seconds", 0)
-                )
-                actions.append(action)
-            
-            device_control = DeviceControl(
-                device_type=device_control_data.get("device_type"),
-                device_id=device_control_data.get("device_id"),
-                actions=actions
-            )
-        else:
-            # 기존 단일 action 방식 (하위 호환성)
-            device_control = DeviceControl(**device_control_data) if device_control_data else None
-        
-        recommendation_id = await recommendation_service.create_recommendation(
-            title=ai_recommendation['title'],
-            contents=ai_recommendation['contents'],
-            device_control=device_control,
-            user_id=request.user_id,
-            mode="production"
-        )
-        
-        logger.info(f"✅ MongoDB에 추천 저장 완료: {recommendation_id}")
-        
-        # 하드웨어에 추천 전송
-        hardware_response = await hardware_client.send_recommendation(
-            recommendation_id,
-            ai_recommendation['title'],
-            ai_recommendation['contents']
-        )
-        
-        logger.info(f"✅ 하드웨어 전송 완료: {hardware_response}")
-        
-        # 응답 반환
-        return RecommendationCreateResponse(
-            recommendation_id=recommendation_id,
-            message="AI 추천이 하드웨어에 전송되었습니다"
-        )
-            
-    except Exception as e:
-        logger.error(f"❌ 하드웨어 전송 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"하드웨어 전송 실패: {str(e)}")
-
-
 @router.post("/generate", response_model=RecommendationCreateResponse)
 async def create_demo_recommendation(request: RecommendationCreateRequest):
     """데모용 추천 생성 및 하드웨어 전송"""
@@ -290,7 +212,7 @@ async def feedback_recommendation(request: RecommendationConfirmRequest):
                     )
                     
                     logger.info(f"✅ 기기 제어 실행 완료: {control_result}")
-                
+                    
             except Exception as e:
                 logger.warning(f"⚠️ 기기 제어 실행 실패: {e}")
         

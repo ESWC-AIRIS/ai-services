@@ -586,7 +586,10 @@ async def demo_generate_recommendation(scenario: str = None) -> Dict[str, Any]:
             recommendation = _generate_recommendation_from_weather(weather_data, scenario)
             
             # MongoDB에 저장
-            await _save_recommendation_to_mongodb(recommendation, mode="demo")
+            recommendation_id = await _save_recommendation_to_mongodb(recommendation, mode="demo")
+            
+            # recommendation_id를 recommendation에 추가
+            recommendation['recommendation_id'] = recommendation_id
             
             return recommendation
         
@@ -595,7 +598,10 @@ async def demo_generate_recommendation(scenario: str = None) -> Dict[str, Any]:
         recommendation = _generate_recommendation_from_weather(default_weather, "일반적인 날씨")
         
         # MongoDB에 저장
-        await _save_recommendation_to_mongodb(recommendation, mode="demo")
+        recommendation_id = await _save_recommendation_to_mongodb(recommendation, mode="demo")
+        
+        # recommendation_id를 recommendation에 추가
+        recommendation['recommendation_id'] = recommendation_id
         
         return recommendation
         

@@ -56,7 +56,7 @@ HARDWARE_URL = os.getenv("HARDWARE_URL", "http://localhost:8080")
 # API 엔드포인트 경로
 GATEWAY_CONTROL_ENDPOINT = f"{GATEWAY_URL}/api/lg/control"
 GATEWAY_DEVICES_ENDPOINT = f"{GATEWAY_URL}/api/lg/devices"
-HARDWARE_RECOMMENDATIONS_ENDPOINT = f"{HARDWARE_URL}/api/recommendations"
+HARDWARE_RECOMMENDATIONS_ENDPOINT = f"{HARDWARE_URL}/api/recommendations/"
 
 # =============================================================================
 # Mock 서버 설정 (개발용 - examples/mock_servers.py에서만 사용)

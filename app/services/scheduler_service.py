@@ -75,9 +75,9 @@ class SchedulerService:
             
             if should_recommend:
                 # AI Agent로 추천 생성
-                from app.agents.recommendation_agent import create_agent
+                from app.agents.recommendation_agent import RecommendationAgent
                 
-                agent = create_agent()
+                agent = RecommendationAgent()
                 context = f"자동 스케줄러 추천 (시간: {now.hour}시, 계절: {self._get_season(now.month)})"
                 
                 # AI 추천 생성
@@ -137,13 +137,29 @@ class SchedulerService:
                     logger.info(f"✅ 스케줄러 추천 MongoDB 저장 완료: {recommendation_id}")
                     result["recommendation_id"] = recommendation_id
                     
+                    # 하드웨어에 추천 전송
+                    try:
+                        from app.api.endpoints.recommendations import hardware_client
+                        
+                        hardware_response = await hardware_client.send_recommendation(
+                            recommendation_id,
+                            recommendation['title'],
+                            recommendation['contents']
+                        )
+                        
+                        logger.info(f"✅ 스케줄러 추천 하드웨어 전송 완료: {hardware_response}")
+                        result["hardware_response"] = hardware_response
+                        
+                    except Exception as e:
+                        logger.error(f"❌ 스케줄러 추천 하드웨어 전송 실패: {e}")
+                        
                 except Exception as e:
                     logger.error(f"❌ 스케줄러 추천 MongoDB 저장 실패: {e}")
-                
-                # 제어 정보가 있으면 로그 출력
-                if result.get("device_control"):
-                    device_info = result["device_control"]
-                    logger.info(f"🎯 제어 정보: {device_info.get('device_alias')} -> {device_info.get('action')}")
+                    
+                    # 제어 정보가 있으면 로그 출력
+                    if result.get("device_control"):
+                        device_info = result["device_control"]
+                        logger.info(f"🎯 제어 정보: {device_info.get('device_alias')} -> {device_info.get('action')}")
                 
             else:
                 result.update({
