@@ -25,7 +25,7 @@ class HardwareClient:
     def __init__(self, hardware_url: str = HARDWARE_URL):
         self.hardware_url = hardware_url
         self.recommendations_endpoint = HARDWARE_RECOMMENDATIONS_ENDPOINT
-        self.timeout = 10.0
+        self.timeout = 60.0
         logger.info(f"HardwareClient 초기화: url={self.hardware_url}")
     
     async def send_recommendation(self, recommendation_id: str, title: str, contents: str) -> Dict[str, Any]:
