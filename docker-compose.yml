@@ -2,16 +2,6 @@ version: '3.8'
 
 services:
 
-  mongodb: # mongodb
-    image: mongo:latest
-    container_name: gazehome-mongodb
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    networks:
-      - gazehome-network
-
   ai-services: # ai-services
     build: .
     container_name: gazehome-ai-services
@@ -19,17 +9,9 @@ services:
       - "8000:8000"
     env_file:
       - .env
-    environment:
-      - MONGODB_URL=mongodb://mongodb:27017
-    depends_on:
-      - mongodb
     networks:
       - gazehome-network
 
 networks:
   gazehome-network:
     driver: bridge
-
-volumes:
-  mongodb_data:
-    driver: local
