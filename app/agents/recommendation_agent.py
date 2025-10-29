@@ -294,22 +294,23 @@ class RecommendationAgent:
             ⚠️ 매우 중요한 규칙:
             1. 반드시 get_user_devices() 도구를 먼저 호출하여 실제 기기 목록을 확인하세요!
             2. 반드시 get_current_weather() 도구를 호출하여 날씨 정보를 확인하세요!
-            3. device_id는 반드시 실제 사용자 기기 목록에서 가져온 ID만 사용하세요!
-            4. device_id가 None이거나 빈 값이면 절대 추천을 생성하지 마세요!
-            5. 도구를 사용하지 않고 추천을 생성하면 안 됩니다!
+            3. 추천할 기기를 선택한 후 반드시 get_device_state(device_id)로 기기 상태를 확인하세요!
+            4. device_id는 반드시 실제 사용자 기기 목록에서 가져온 ID만 사용하세요!
+            5. device_id가 None이거나 빈 값이면 절대 추천을 생성하지 마세요!
+            6. 도구를 사용하지 않고 추천을 생성하면 안 됩니다!
             
             사용 가능한 도구:
             - get_current_weather: 현재 날씨 조회 (필수)
             - get_user_devices: 사용자 스마트 가전 목록 조회 (필수)
-            - get_device_state: 특정 기기 상태 조회 (선택사항)
+            - get_device_state: 특정 기기 상태 조회 (필수 - 추천할 기기 선택 후 반드시 호출!)
             
             추천 워크플로우 (반드시 순서대로 실행):
             1. get_current_weather("Seoul") 호출하여 날씨 확인
             2. get_user_devices() 호출하여 사용자 기기 목록 확인 (필수!)
             3. 추천할 기기를 선택한 후 get_device_state(device_id)로 해당 기기 상태 확인 (필수!)
             4. 기기 상태에 따라 적절한 액션 선택:
-               - 기기가 꺼져있으면: 먼저 켜기 (purifier_on, aircon_on, dryer_on)
-               - 기기가 켜져있으면: 세부 설정 (wind_power, temp_24 등)
+               - 기기가 꺼져있으면(is_running=false): 먼저 켜기 액션을 첫 번째로 추가 (purifier_on, aircon_on)
+               - 기기가 켜져있으면(is_running=true): 세부 설정 액션만 추가 (wind_power, temp_24 등)
             5. 날씨와 기기 정보를 종합하여 최적의 추천 생성
             6. device_id는 반드시 실제 사용자 기기 목록에서 가져온 ID 사용!
             
@@ -334,7 +335,8 @@ class RecommendationAgent:
             
              ⚠️ 액션 시퀀스 생성 규칙:
              - 반드시 get_device_state로 기기 상태를 먼저 확인하세요
-             - 기기가 꺼져있으면(is_running=false) 먼저 켜기 액션을 추가하세요
+             - 기기가 꺼져있으면(is_running=false) 반드시 먼저 켜기 액션을 추가하세요 (purifier_on, aircon_on)
+             - 기기가 켜져있으면(is_running=true) 세부 설정 액션만 추가하세요 (wind_power, temp_24 등)
              - 요청된 기능에 필요한 모든 액션을 순서대로 배열에 추가하세요
              - 타이머나 알림이 필요하면 마지막에 추가하세요
              - order는 1부터 순차적으로 설정하세요
@@ -358,11 +360,11 @@ class RecommendationAgent:
             ⚠️ 기기 상태별 액션 선택 가이드:
             
             📱 공기청정기 상태별 추천:
-            - is_running=false: purifier_on (먼저 켜기)
+            - is_running=false: 반드시 purifier_on 먼저 (기기 켜기)
             - is_running=true: wind_low/mid/high/auto/power (바람 세기 조정), circulator/clean/auto (실행 모드 선택)
             
             🌡️ 에어컨 상태별 추천:
-            - is_running=false: aircon_on (먼저 켜기)
+            - is_running=false: 반드시 aircon_on 먼저 (기기 켜기)
             - is_running=true: temp_18~30 (온도 조정), aircon_wind_low/mid/high/auto (바람 세기 조정), aircon_dry/clean/cool (실행 모드 선택)
             
             
@@ -381,7 +383,9 @@ class RecommendationAgent:
             1. 먼저 get_user_devices() 도구를 호출하세요!
             2. 그 다음 get_current_weather("Seoul") 도구를 호출하세요!
             3. 추천할 기기를 선택한 후 get_device_state(device_id)로 상태를 확인하세요!
-            4. 기기 상태에 따라 필요한 액션 시퀀스를 생성하세요!
+            4. 기기 상태(is_running)에 따라 필요한 액션 시퀀스를 생성하세요!
+               - 꺼져있으면: 켜기 액션 먼저 + 세부 설정 액션
+               - 켜져있으면: 세부 설정 액션만
             5. 마지막에 추천을 생성하세요!
             
             {agent_scratchpad}
