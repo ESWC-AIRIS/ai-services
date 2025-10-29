@@ -309,8 +309,8 @@ class RecommendationAgent:
             2. get_user_devices() 호출하여 사용자 기기 목록 확인 (필수!)
             3. 추천할 기기를 선택한 후 get_device_state(device_id)로 해당 기기 상태 확인 (필수!)
             4. 기기 상태에 따라 적절한 액션 선택:
-               - 기기가 꺼져있으면(is_running=false): 먼저 켜기 액션을 첫 번째로 추가 (purifier_on, aircon_on)
-               - 기기가 켜져있으면(is_running=true): 세부 설정 액션만 추가 (wind_power, temp_24 등)
+               - 기기가 꺼져있으면(is_running=false): 먼저 켜기 액션을 첫 번째로 추가
+               - 기기가 켜져있으면(is_running=true): 세부 설정 액션만 추가
             5. 날씨와 기기 정보를 종합하여 최적의 추천 생성
             6. device_id는 반드시 실제 사용자 기기 목록에서 가져온 ID 사용!
             
@@ -336,7 +336,7 @@ class RecommendationAgent:
              ⚠️ 액션 시퀀스 생성 규칙:
              - 반드시 get_device_state로 기기 상태를 먼저 확인하세요
              - 기기가 꺼져있으면(is_running=false) 반드시 먼저 켜기 액션을 추가하세요 (purifier_on, aircon_on)
-             - 기기가 켜져있으면(is_running=true) 세부 설정 액션만 추가하세요 (wind_power, temp_24 등)
+             - 기기가 켜져있으면(is_running=true) 세부 설정 액션만 추가하세요
              - 요청된 기능에 필요한 모든 액션을 순서대로 배열에 추가하세요
              - 타이머나 알림이 필요하면 마지막에 추가하세요
              - order는 1부터 순차적으로 설정하세요
@@ -376,6 +376,7 @@ class RecommendationAgent:
             3. 사용자가 보유하지 않은 기기는 절대 추천하지 마세요!
             4. 한 번에 하나의 가전만 제어하세요!
             5. 가장 우선순위가 높은 기기 하나만 선택하여 추천하세요!
+            6. 타이틀과 액션이 반드시 일치해야 합니다! 타이틀에서 언급한 기능은 액션에 포함되어야 합니다!
             
             {input}
             
@@ -580,8 +581,19 @@ async def demo_generate_recommendation(scenario: str = None) -> Dict[str, Any]:
             print(f"🌤️ 데모 시나리오: {scenario}")
             print(f"📊 날씨 데이터: {weather_data}")
             
-            # 실제 Agent처럼 날씨 데이터를 기반으로 추천 생성
-            recommendation = _generate_recommendation_from_weather(weather_data, scenario)
+            # 실제 Agent 사용하여 추천 생성
+            agent = create_recommendation_agent()
+            context = f"""
+            시나리오: {scenario}
+            현재 날씨 상황:
+            - 기온: {weather_data['temperature']}°C
+            - 체감온도: {weather_data['feels_like']}°C  
+            - 습도: {weather_data['humidity']}%
+            - 날씨 설명: {weather_data['description']}
+            
+            이 상황에 맞는 스마트 홈 기기 제어를 추천해주세요.
+            """
+            recommendation = await agent.generate_recommendation(context)
             
             # MongoDB에 저장
             recommendation_id = await _save_recommendation_to_mongodb(recommendation, mode="demo")
@@ -593,7 +605,17 @@ async def demo_generate_recommendation(scenario: str = None) -> Dict[str, Any]:
         
         # 기본 응답
         print(f"📊 기본 날씨 데이터: {default_weather}")
-        recommendation = _generate_recommendation_from_weather(default_weather, "일반적인 날씨")
+        agent = create_recommendation_agent()
+        context = f"""
+        일반적인 날씨 상황:
+        - 기온: {default_weather['temperature']}°C
+        - 체감온도: {default_weather['feels_like']}°C  
+        - 습도: {default_weather['humidity']}%
+        - 날씨 설명: {default_weather['description']}
+        
+        이 상황에 맞는 스마트 홈 기기 제어를 추천해주세요.
+        """
+        recommendation = await agent.generate_recommendation(context)
         
         # MongoDB에 저장
         recommendation_id = await _save_recommendation_to_mongodb(recommendation, mode="demo")
@@ -605,96 +627,48 @@ async def demo_generate_recommendation(scenario: str = None) -> Dict[str, Any]:
         
     except Exception as e:
         print(f"❌ 데모 추천 생성 실패: {e}")
+        import time
         return {
             "title": "데모 추천",
             "contents": "데모용 추천입니다.",
             "device_control": {
                 "device_type": "air_conditioner",
                 "action": "turn_on"
-            }
+            },
+            "recommendation_id": f"error_rec_{int(time.time())}"
         }
 
-def _generate_recommendation_from_weather(weather_data: Dict[str, Any], scenario_name: str) -> Dict[str, Any]:
-    """날씨 데이터를 기반으로 AI Agent가 추천 생성 (진짜 AI 사용)"""
-    temp = weather_data["temperature"]
-    feels_like = weather_data["feels_like"]
-    humidity = weather_data["humidity"]
-    description = weather_data["description"]
-    
-    # AI Agent에게 상황을 전달하여 추천 생성
-    context = f"""
-    시나리오: {scenario_name}
-    현재 날씨 상황:
-    - 기온: {temp}°C
-    - 체감온도: {feels_like}°C  
-    - 습도: {humidity}%
-    - 날씨 설명: {description}
-    
-    이 상황에 맞는 스마트 홈 기기 제어를 추천해주세요.
-    사용 가능한 기기와 액션은 프롬프트에 명시된 대로 사용하세요.
-    """
-    
+# _generate_recommendation_from_weather 함수 제거 - 이제 RecommendationAgent를 직접 사용
+
+async def _get_actual_device_id() -> Optional[str]:
+    """실제 Gateway API에서 기기 ID 조회"""
     try:
-        # 진짜 AI Agent 사용 - 동기 방식으로 직접 실행
-        # 이벤트 루프 충돌을 피하기 위해 새로운 스레드에서 실행
+        import aiohttp
+        gateway_url = os.getenv("GATEWAY_URL", "http://localhost:9000")
         
-        import threading
-        import queue
-        import time
-        
-        def run_ai_agent_thread():
-            """별도 스레드에서 AI Agent 실행"""
-            try:
-                # 새로운 이벤트 루프 생성
-                import asyncio
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                
-                try:
-                    # AI Agent 생성 및 실행
-                    agent = RecommendationAgent()
-                    recommendation = agent.generate_recommendation_sync(context)
-                    result_queue.put(recommendation)
-                finally:
-                    loop.close()
-            except Exception as e:
-                result_queue.put({
-                    "title": "AI 추천 실패",
-                    "contents": f"AI 추천 생성 중 오류: {e}",
-                    "device_control": None
-                })
-        
-        # 결과를 받을 큐 생성
-        result_queue = queue.Queue()
-        
-        # 별도 스레드에서 AI Agent 실행
-        thread = threading.Thread(target=run_ai_agent_thread)
-        thread.daemon = True
-        thread.start()
-        
-        # 결과 대기 (최대 60초)
-        try:
-            recommendation = result_queue.get(timeout=60)
-            if recommendation and recommendation.get("device_control"):
-                return recommendation
-            else:
-                raise Exception("AI Agent가 유효한 추천을 생성하지 못함")
-        except queue.Empty:
-            raise Exception("AI Agent 실행 타임아웃")
-                
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{gateway_url}/api/lg/devices") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    devices = data.get('response', [])
+                    
+                    # 첫 번째 온라인 기기 선택
+                    for device in devices:
+                        device_info = device.get('deviceInfo', {})
+                        if device_info.get("reportable", False):  # 온라인 상태
+                            device_id = device.get("deviceId")
+                            if device_id:
+                                print(f"✅ 실제 기기 ID 조회 성공: {device_id}")
+                                return device_id
+                    
+                    print("⚠️ 온라인 기기를 찾을 수 없음")
+                    return None
+                else:
+                    print(f"❌ Gateway API 호출 실패: {response.status}")
+                    return None
     except Exception as e:
-        print(f"❌ AI Agent 추천 생성 실패: {e}")
-    
-    # AI Agent 실패 시 기본 응답
-    return {
-        "title": f"{scenario_name} - 스마트 홈 추천",
-        "contents": f"현재 서울 기온 {temp}°C, 습도 {humidity}%입니다. 실내 환경 개선을 위한 스마트 홈 기기 제어를 추천합니다.",
-        "device_control": {
-            "device_type": "air_purifier",
-            "action": "auto",
-            "device_id": None  # 실제 기기 ID는 동적으로 조회해야 함
-        }
-    }
+        print(f"❌ 실제 기기 ID 조회 실패: {e}")
+        return None
 
 async def _save_recommendation_to_mongodb(recommendation: Dict[str, Any], mode: str = "demo") -> str:
     """추천을 MongoDB에 저장"""
